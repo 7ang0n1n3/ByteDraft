@@ -17,6 +17,8 @@
     <script src="libs/tinymce/js/tinymce/tinymce.min.js"></script>
     <!-- Templates script -->
     <script src="templates.js"></script>
+    <!-- DOCX Export Module (classic script) -->
+    <script src="docxExport.js"></script>
     
     <style>
         :root {
@@ -1190,13 +1192,28 @@
                 updateAllSectionContents();
                 saveProject();
                 const zip = new JSZip();
-                // Create the document structure
-                const documentXml = createDocxDocument();
+                // Get header/footer content from localStorage
+                const headerFooter = JSON.parse(localStorage.getItem('sysreptor_headerfooter') || '{}');
+                const projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
+                // Create the document structure with dependencies
+                const documentXml = createDocxDocument(
+                    currentProject,
+                    customChangelog,
+                    versionHistory,
+                    getDocumentInfo,
+                    htmlToDocxXml,
+                    processSubsectionsRecursively,
+                    generateDocInfoTableDOCX,
+                    escapeXml
+                );
                 const stylesXml = createDocxStyles();
                 const numberingXml = createDocxNumbering();
                 const settingsXml = createDocxSettings();
                 const contentTypesXml = createDocxContentTypes();
                 const relsXml = createDocxRels();
+                // Generate header/footer XML
+                const headerXml = createDocxHeader(projectHeaderFooter.header);
+                const footerXml = createDocxFooter(projectHeaderFooter.footer);
                 // Add files to zip
                 zip.file('word/document.xml', documentXml);
                 zip.file('word/styles.xml', stylesXml);
@@ -1205,6 +1222,8 @@
                 zip.file('[Content_Types].xml', contentTypesXml);
                 zip.file('_rels/.rels', relsXml);
                 zip.file('word/_rels/document.xml.rels', createDocxDocumentRels());
+                zip.file('word/header1.xml', headerXml);
+                zip.file('word/footer1.xml', footerXml);
                 // Generate and download
                 const blob = await zip.generateAsync({type: 'blob'});
                 downloadFile(blob, `${currentProject.name.replace(/[^a-z0-9]/gi, '_')}.docx`);
@@ -1212,7 +1231,16 @@
             } catch (error) {
                 console.error('Error in DOCX export:', error);
                 try {
-                    const documentXml = createDocxDocument();
+                    const documentXml = createDocxDocument(
+                        currentProject,
+                        customChangelog,
+                        versionHistory,
+                        getDocumentInfo,
+                        () => '',
+                        () => '',
+                        () => '',
+                        (text) => text
+                    );
                     console.log('Generated document.xml (first 1000 chars):', documentXml.slice(0, 1000));
                 } catch (e) {
                     console.error('Error generating document.xml:', e);
@@ -2006,601 +2034,13 @@
           return rtf;
         }
 
-        // DOCX Helper Functions
-        function createDocxDocument() {
-            try {
-                console.log('createDocxDocument called');
-                console.log('currentProject:', currentProject);
-                if (!currentProject) {
-                    console.error('No currentProject defined!');
-                    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: No project data</w:t></w:r></w:p></w:body></w:document>`;
-                }
-                if (!currentProject.sections || !Array.isArray(currentProject.sections)) {
-                    console.error('No sections array in currentProject!');
-                    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: No sections</w:t></w:r></w:p></w:body></w:document>`;
-                }
-                currentProject.sections.forEach((section, idx) => {
-                    if (!section) {
-                        console.error('Section is undefined at index', idx);
-                    } else {
-                        console.log(`Section ${idx}:`, section);
-                        if (!section.title) {
-                            console.error(`Section ${idx} has no title!`, section);
-                        }
-                    }
-                });
-                let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:body>
-        <w:sectPr>
-            <w:pgSz w:w="12240" w:h="15840"/>
-            <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
-        </w:sectPr>`;
-                
-                // Title page
-                xml += `
-            <w:p>
-                <w:pPr>
-                    <w:jc w:val="center"/>
-                    <w:spacing w:after="480" w:before="480"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:b/>
-                        <w:sz w:val="72"/>
-                    </w:rPr>
-                    <w:t>${escapeXml(currentProject.name)}</w:t>
-                </w:r>
-            </w:p>`;
-                
-                if (currentProject.description) {
-                    xml += `
-            <w:p>
-                <w:pPr>
-                    <w:jc w:val="center"/>
-                    <w:spacing w:after="240"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:sz w:val="36"/>
-                    </w:rPr>
-                    <w:t>${escapeXml(currentProject.description)}</w:t>
-                </w:r>
-            </w:p>`;
-                }
-                
-                // Document Info Table (29 lines before)
-                const info = getDocumentInfo(currentProject.id);
-                for (let i = 0; i < 29; i++) xml += '<w:p></w:p>';
-                xml += generateDocInfoTableDOCX(info);
-                // Add 10 empty paragraphs after table
-                for (let i = 0; i < 10; i++) xml += '<w:p></w:p>';
-                // (No page break here! The next page break should be after the changelog, before the TOC)
-                
-                // Document Changelog Page
-                xml += `
-            <w:p>
-                <w:pPr>
-                    <w:spacing w:after="840" w:before="840"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:b/>
-                        <w:sz w:val="32"/>
-                    </w:rPr>
-                    <w:t>Document Changelog</w:t>
-                </w:r>
-            </w:p>`;
-                
-                // Get changelog data
-                const changelogData = customChangelog[currentProject.id];
-                let changelogRows = [];
-                
-                if (changelogData) {
-                    try {
-                        changelogRows = JSON.parse(changelogData);
-                    } catch (e) {
-                        console.error('Error parsing changelog data:', e);
-                    }
-                }
-                
-                if (changelogRows && changelogRows.length > 0) {
-                    // Create changelog table
-                    xml += `
-            <w:tbl>
-                <w:tblPr>
-                    <w:tblStyle w:val="TableGrid"/>
-                    <w:tblW w:w="0" w:type="auto"/>
-                    <w:tblBorders>
-                        <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                    </w:tblBorders>
-                </w:tblPr>
-                <w:tblGrid>
-                    <w:gridCol w:w="2000"/>
-                    <w:gridCol w:w="2000"/>
-                    <w:gridCol w:w="2000"/>
-                    <w:gridCol w:w="2000"/>
-                    <w:gridCol w:w="2400"/>
-                    <w:gridCol w:w="4000"/>
-                </w:tblGrid>`;
-                    
-                    // Table headers
-                    const headers = ['Version Number', 'Approved Date', 'Author', 'Reviewer', 'Approver for Change', 'Description'];
-                    xml += `
-                <w:tr>
-                    <w:trPr>
-                        <w:trHeight w:val="400"/>
-                    </w:trPr>`;
-                    headers.forEach(header => {
-                        xml += `
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="2000" w:type="dxa"/>
-                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:jc w:val="center"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:b/>
-                                    <w:color w:val="FFFFFF"/>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>${escapeXml(header)}</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>`;
-                    });
-                    xml += `
-                </w:tr>`;
-                    
-                    // Table rows
-                    changelogRows.forEach(row => {
-                        const rowData = [
-                            row.version || '',
-                            row.date || '',
-                            row.author || '',
-                            row.reviewer || '',
-                            row.approver || '',
-                            row.desc || ''
-                        ];
-                        
-                        xml += `
-                <w:tr>
-                    <w:trPr>
-                        <w:trHeight w:val="400"/>
-                    </w:trPr>`;
-                        
-                        rowData.forEach((cell, index) => {
-                            const colWidth = index === 4 ? 2400 : index === 5 ? 4000 : 2000;
-                            xml += `
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="${colWidth}" w:type="dxa"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:spacing w:after="0"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>${escapeXml(cell)}</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>`;
-                        });
-                        
-                        xml += `
-                </w:tr>`;
-                    });
-                    
-                    xml += `
-            </w:tbl>`;
-                } else {
-                    // Fallback to version history if no custom changelog
-                    const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id).slice(-5);
-                    if (projectVersions.length > 0) {
-                        xml += `
-            <w:tbl>
-                <w:tblPr>
-                    <w:tblStyle w:val="TableGrid"/>
-                    <w:tblW w:w="0" w:type="auto"/>
-                    <w:tblBorders>
-                        <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
-                    </w:tblBorders>
-                </w:tblPr>
-                <w:tblGrid>
-                    <w:gridCol w:w="2000"/>
-                    <w:gridCol w:w="6000"/>
-                    <w:gridCol w:w="2000"/>
-                </w:tblGrid>
-                <w:tr>
-                    <w:trPr>
-                        <w:trHeight w:val="400"/>
-                    </w:trPr>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="2000" w:type="dxa"/>
-                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:jc w:val="center"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:b/>
-                                    <w:color w:val="FFFFFF"/>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>Version</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="6000" w:type="dxa"/>
-                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:jc w:val="center"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:b/>
-                                    <w:color w:val="FFFFFF"/>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>Description</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="2000" w:type="dxa"/>
-                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:jc w:val="center"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:b/>
-                                    <w:color w:val="FFFFFF"/>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>Date</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                </w:tr>`;
-                        
-                        projectVersions.forEach((version, index) => {
-                            xml += `
-                <w:tr>
-                    <w:trPr>
-                        <w:trHeight w:val="400"/>
-                    </w:trPr>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="2000" w:type="dxa"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:spacing w:after="0"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>${escapeXml((projectVersions.length - index).toString())}</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="6000" w:type="dxa"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:spacing w:after="0"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>${escapeXml(version.description)}</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                    <w:tc>
-                        <w:tcPr>
-                            <w:tcW w:w="2000" w:type="dxa"/>
-                        </w:tcPr>
-                        <w:p>
-                            <w:pPr>
-                                <w:spacing w:after="0"/>
-                            </w:pPr>
-                            <w:r>
-                                <w:rPr>
-                                    <w:sz w:val="20"/>
-                                </w:rPr>
-                                <w:t>${escapeXml(new Date(version.timestamp).toLocaleDateString())}</w:t>
-                            </w:r>
-                        </w:p>
-                    </w:tc>
-                </w:tr>`;
-                        });
-                        
-                        xml += `
-            </w:tbl>`;
-                    } else {
-                        xml += `
-            <w:p>
-                <w:r>
-                    <w:t>No version history available.</w:t>
-                </w:r>
-            </w:p>`;
-                    }
-                }
-                
-                // Page break
-                xml += `
-            <w:p>
-                <w:r>
-                    <w:br w:type="page"/>
-                </w:r>
-            </w:p>`;
-                
-                // Table of Contents
-                xml += `
-            <w:p>
-                <w:pPr>
-                    <w:pStyle w:val="TOCHeading"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:b/>
-                        <w:color w:val="2563EB"/>
-                        <w:sz w:val="44"/>
-                    </w:rPr>
-                    <w:t>Table of Contents</w:t>
-                </w:r>
-            </w:p>
-            <w:p>
-                <w:r>
-                    <w:fldChar w:fldCharType="begin"/>
-                </w:r>
-                <w:r>
-                    <w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText>
-                </w:r>
-                <w:r>
-                    <w:fldChar w:fldCharType="separate"/>
-                </w:r>
-                <w:r>
-                    <w:t>Click here to update the table of contents</w:t>
-                </w:r>
-                <w:r>
-                    <w:fldChar w:fldCharType="end"/>
-                </w:r>
-            </w:p>`;
-                
-                // Page break
-                xml += `
-            <w:p>
-                <w:r>
-                    <w:br w:type="page"/>
-                </w:r>
-            </w:p>`;
-                
-                // Main content
-                currentProject.sections.forEach((section, index) => {
-                    xml += `
-            <w:p>
-                <w:pPr>
-                    <w:pStyle w:val="Heading1"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:b/>
-                        <w:color w:val="2563EB"/>
-                        <w:sz w:val="32"/>
-                    </w:rPr>
-                    <w:t>${escapeXml(section.title)}</w:t>
-                </w:r>
-            </w:p>`;
-                    
-                    if (section.content) {
-                        const xmlContent = htmlToDocxXml(section.content);
-                        if (xmlContent) {
-                            xml += xmlContent;
-                        }
-                    }
-                    
-                    // Handle subsections recursively
-                    if (section.subsections && section.subsections.length > 0) {
-                        section.subsections.forEach((sub, subIndex) => {
-                            xml += `
-            <w:p>
-                <w:pPr>
-                    <w:pStyle w:val="Heading2"/>
-                </w:pPr>
-                <w:r>
-                    <w:rPr>
-                        <w:b/>
-                        <w:color w:val="2563EB"/>
-                        <w:sz w:val="28"/>
-                    </w:rPr>
-                    <w:t>${escapeXml(sub.title)}</w:t>
-                </w:r>
-            </w:p>`;
-                            
-                            if (sub.content) {
-                                const subXmlContent = htmlToDocxXml(sub.content);
-                                if (subXmlContent) {
-                                    xml += subXmlContent;
-                                }
-                            }
-                            
-                            // Recursively handle deeper subsections (all use Heading3 style)
-                            if (sub.subsections && sub.subsections.length > 0) {
-                                xml += processSubsectionsRecursively(sub.subsections);
-                            }
-                        });
-                    }
-                    
-                    // Add spacing between sections (but not after the last section)
-                    if (index < currentProject.sections.length - 1) {
-                        xml += `
-            <w:p>
-                <w:pPr>
-                    <w:spacing w:after="240"/>
-                </w:pPr>
-            </w:p>`;
-                    }
-                });
-                
-                xml += `
-    </w:body>
-</w:document>`;
-                
-                return xml;
-            } catch (error) {
-                console.error('Error creating DOCX document:', error);
-                return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: Failed to create DOCX document</w:t></w:r></w:p></w:body></w:document>`;
-            }
-        }
+
         
-        function createDocxStyles() {
-            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-    <w:docDefaults>
-        <w:rPrDefault>
-            <w:rPr>
-                <w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>
-                <w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/>
-            </w:rPr>
-        </w:rPrDefault>
-    </w:docDefaults>
-    
-    <!-- Heading 1 Style -->
-    <w:style w:type="paragraph" w:styleId="Heading1">
-        <w:name w:val="Heading 1"/>
-        <w:qFormat/>
-        <w:pPr>
-            <w:spacing w:before="240"/>
-            <w:outlineLvl w:val="0"/>
-            <w:ind w:left="0"/>
-            <w:numPr>
-                <w:numId w:val="1"/>
-                <w:ilvl w:val="0"/>
-            </w:numPr>
-        </w:pPr>
-        <w:rPr>
-            <w:b/>
-            <w:sz w:val="32"/>
-            <w:szCs w:val="32"/>
-            <w:color w:val="2563EB"/>
-        </w:rPr>
-    </w:style>
-    
-    <!-- Heading 2 Style -->
-    <w:style w:type="paragraph" w:styleId="Heading2">
-        <w:name w:val="Heading 2"/>
-        <w:qFormat/>
-        <w:pPr>
-            <w:spacing w:before="240"/>
-            <w:outlineLvl w:val="1"/>
-            <w:ind w:left="0"/>
-            <w:numPr>
-                <w:numId w:val="1"/>
-                <w:ilvl w:val="1"/>
-            </w:numPr>
-        </w:pPr>
-        <w:rPr>
-            <w:b/>
-            <w:sz w:val="28"/>
-            <w:szCs w:val="28"/>
-            <w:color w:val="2563EB"/>
-        </w:rPr>
-    </w:style>
-    
-    <!-- Heading 3 Style -->
-    <w:style w:type="paragraph" w:styleId="Heading3">
-        <w:name w:val="Heading 3"/>
-        <w:qFormat/>
-        <w:pPr>
-            <w:spacing w:before="240"/>
-            <w:outlineLvl w:val="2"/>
-            <w:ind w:left="0"/>
-            <w:numPr>
-                <w:numId w:val="1"/>
-                <w:ilvl w:val="2"/>
-            </w:numPr>
-        </w:pPr>
-        <w:rPr>
-            <w:b/>
-            <w:sz w:val="24"/>
-            <w:szCs w:val="24"/>
-            <w:color w:val="2563EB"/>
-        </w:rPr>
-    </w:style>
-    
-    <!-- TOCHeading Style -->
-    <w:style w:type="paragraph" w:styleId="TOCHeading">
-      <w:name w:val="TOC Heading"/>
-      <w:next w:val="Normal"/>
-      <w:uiPriority w:val="39"/>
-      <w:qFormat/>
-      <w:pPr>
-        <w:keepNext/>
-        <w:spacing w:before="240" w:after="240"/>
-        <w:jc w:val="center"/>
-      </w:pPr>
-      <w:rPr>
-        <w:b/>
-        <w:color w:val="2563EB"/>
-        <w:sz w:val="44"/>
-        <w:szCs w:val="44"/>
-      </w:rPr>
-    </w:style>
-</w:styles>`;
-        }
+
         
-        function createDocxContentTypes() {
-            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-    <Default Extension="xml" ContentType="application/xml"/>
-    <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-    <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
-    <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
-    <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
-</Types>`;
-        }
+
         
-        function createDocxRels() {
-            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`;
-        }
+
         
         function createDocxNumbering() {
             return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2671,6 +2111,8 @@
             rels += '    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>';
             rels += '\n    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>';
             rels += '\n    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>';
+            rels += '\n    <Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>';
+            rels += '\n    <Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>';
             // Add hyperlink relationships
             if (window._docxHyperlinks) {
                 window._docxHyperlinks.forEach(link => {
@@ -3300,6 +2742,27 @@
         function showCustomChangelogModal() {
             renderChangelogTable();
             new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+        }
+
+        // Add these helper functions near createDocxDocument:
+        function createDocxHeader(headerContent) {
+            // Replace {{page}} with Word field code for page number
+            const content = (headerContent || '').replace(/\{\{page\}\}/g, '<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>');
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:p><w:r><w:t>${escapeXml(content)}</w:t></w:r></w:p></w:hdr>`;
+        }
+        function createDocxFooter(footerContent) {
+            // Replace {{page}} with Word field code for page number
+            let parts = (footerContent || '').split(/(\{\{page\}\})/g);
+            let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p>';
+            parts.forEach(part => {
+                if (part === '{{page}}') {
+                    xml += '<w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple>';
+                } else if (part) {
+                    xml += `<w:r><w:t>${escapeXml(part)}</w:t></w:r>`;
+                }
+            });
+            xml += '</w:p></w:ftr>';
+            return xml;
         }
     </script>
 </body>
