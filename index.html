@@ -1,0 +1,3306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ByteDraft - Technical Documentation Tool</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="libs/bootstrap.min.css" rel="stylesheet">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="libs/github-dark.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="all.min.css">
+    <!-- JSZip for creating files -->
+    <script src="libs/jszip.min.js"></script>
+    <!-- Add TinyMCE -->
+    <script src="libs/tinymce/js/tinymce/tinymce.min.js"></script>
+    <!-- Templates script -->
+    <script src="templates.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --info-color: #0891b2;
+            --light-bg: #f8fafc;
+            --dark-bg: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            background: var(--light-bg);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            width: 280px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .project-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .project-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .project-card.active {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+
+        .section-item {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        .section-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            background: #f8fafc;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-content {
+            padding: 1rem;
+        }
+
+        .tinymce-editor {
+            min-height: 200px;
+            font-size: 14px;
+        }
+
+        /* Ensure Font Awesome icons are visible */
+        .fas, .far, .fab {
+            font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 6 Brands", "Font Awesome 5 Brands" !important;
+            font-weight: 900 !important;
+            font-style: normal !important;
+            font-variant: normal !important;
+            text-rendering: auto !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            display: inline-block !important;
+        }
+
+        .far {
+            font-weight: 400 !important;
+        }
+
+        .fab {
+            font-weight: 400 !important;
+        }
+
+        .custom-fields-panel {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .field-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .template-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .modal-xl {
+            max-width: 90%;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .status-draft { background: #fef3c7; color: #92400e; }
+        .status-working { background: #dbeafe; color: #1e40af; }
+        .status-publish { background: #d1fae5; color: #065f46; }
+
+        .project-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .btn-delete:hover {
+            background: #b91c1c;
+        }
+
+        .status-selector {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: white;
+        }
+
+        .drag-handle {
+            cursor: move;
+            color: var(--secondary-color);
+            margin-right: 0.5rem;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn-icon {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .export-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .version-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .version-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+
+        .version-item:hover {
+            background: #f8fafc;
+        }
+
+        .version-item.active {
+            background: #eff6ff;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .toc-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .toc-item {
+            padding: 2px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .toc-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .toc-item.level-1 {
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .toc-item.level-2 {
+            color: #374151;
+        }
+
+        .toc-item.level-3 {
+            color: #6b7280;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="p-3 border-bottom">
+            <h5 class="mb-0">
+                <i class="fas fa-file-alt text-primary me-2"></i>
+                ByteDraft
+            </h5>
+        </div>
+        
+        <!-- Projects Section -->
+        <div class="p-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Projects</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="showNewProjectModal()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="mb-2">
+                <select class="form-select form-select-sm" id="statusFilter" onchange="filterProjects()">
+                    <option value="all">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="working">Working</option>
+                    <option value="publish">Publish</option>
+                </select>
+            </div>
+            <div id="projectsList"></div>
+        </div>
+        <!-- Table of Contents Preview (moved above Templates) -->
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Table of Contents</h6>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="showPageSettings()" title="Page Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="showHeaderFooterModal()" title="Edit Header/Footer">
+                        <i class="fas fa-heading"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="updateTOCPreview()" title="Refresh TOC">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="tocPreview" class="toc-preview">
+                <small class="text-muted">Select a project to see TOC</small>
+            </div>
+        </div>
+        <!-- Templates Section -->
+        <div class="p-3 border-bottom">
+            <h6 class="mb-2">Templates</h6>
+            <div id="templatesList"></div>
+        </div>
+        
+        <!-- Custom Fields -->
+        <div class="p-3 border-bottom">
+            <h6 class="mb-2">Custom Fields</h6>
+            <div id="customFieldsList"></div>
+            <button class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="showNewFieldModal()">
+                <i class="fas fa-plus me-1"></i>Add Field
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button class="btn btn-outline-secondary d-md-none me-2" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h4 class="mb-0" id="currentProjectTitle">Select a Project</h4>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary" onclick="showVersionHistory()">
+                        <i class="fas fa-history me-1"></i>History
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="importProjectFromJSON()">
+                        <i class="fas fa-upload me-1"></i>Import
+                    </button>
+                    <button class="btn btn-outline-info" onclick="showDocumentInfoModal()">
+                        <i class="fas fa-table me-1"></i>Edit Document Info
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="showCustomChangelogModal()">
+                        <i class="fas fa-edit me-1"></i>Document Changelog
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="exportDocument('docx')" title="Export as .docx file (Modern Word format)">
+                                <i class="fas fa-file-word me-2"></i>Word (.docx)
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="exportDocument('pdf')">
+                                <i class="fas fa-file-pdf me-2"></i>PDF
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="p-4">
+            <div id="contentArea">
+                <div class="text-center py-5">
+                    <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Select a project to get started</h5>
+                    <p class="text-muted">Or create a new project to begin documenting</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for JSON import -->
+    <input type="file" id="jsonImportInput" accept=".json" style="display: none;" onchange="handleJSONImport(event)">
+
+    <!-- New Project Modal -->
+    <div class="modal fade" id="newProjectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="newProjectName" placeholder="Enter project name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="newProjectDesc" rows="3" placeholder="Project description"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template</label>
+                        <select class="form-select" id="newProjectTemplate">
+                            <option value="">Start from scratch</option>
+                            <option value="techdoc">Technical Report</option>
+                            <option value="pentest">Penetration Test Report</option>
+                            <option value="audit">Security Audit Report</option>
+                            <option value="assessment">Risk Assessment</option>
+                            <option value="compliance">Compliance Report</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createProject()">Create Project</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Field Modal -->
+    <div class="modal fade" id="newFieldModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Custom Field</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Field Name</label>
+                        <input type="text" class="form-control" id="newFieldName" placeholder="e.g., Client Name">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Default Value</label>
+                        <input type="text" class="form-control" id="newFieldValue" placeholder="Default value">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Field Type</label>
+                        <select class="form-select" id="newFieldType">
+                            <option value="text">Text</option>
+                            <option value="date">Date</option>
+                            <option value="email">Email</option>
+                            <option value="url">URL</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addCustomField()">Add Field</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version History Modal -->
+    <div class="modal fade" id="versionHistoryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Version History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="version-history" id="versionHistoryList">
+                        <!-- Version history items will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Changelog Modal -->
+    <div class="modal fade" id="customChangelogModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Document Changelog</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle" id="changelogTable">
+                            <thead class="table-primary text-white" style="background-color: #001a70;">
+                                <tr>
+                                    <th>Version Number</th>
+                                    <th>Approved Date</th>
+                                    <th>Author</th>
+                                    <th>Reviewer</th>
+                                    <th>Approver for Change</th>
+                                    <th>Description</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="changelogTableBody">
+                                <!-- Rows will be rendered here -->
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="addChangelogRow()"><i class="fas fa-plus"></i> Add Row</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCustomChangelogTable()">Save Changelog</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Settings Modal -->
+    <div class="modal fade" id="pageSettingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Page Numbering Settings</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Adjust page calculation parameters for more accurate page numbering.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Characters per line</label>
+                        <input type="number" class="form-control" id="charsPerLine" value="80" min="40" max="120">
+                        <small class="text-muted">Average characters that fit on one line</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Lines per page</label>
+                        <input type="number" class="form-control" id="linesPerPage" value="40" min="20" max="60">
+                        <small class="text-muted">Number of text lines that fit on one page</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Header height (lines)</label>
+                        <input type="number" class="form-control" id="headerHeight" value="3" min="1" max="10">
+                        <small class="text-muted">Lines reserved for section headers</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Paragraph spacing (lines)</label>
+                        <input type="number" class="form-control" id="paragraphSpacing" value="2" min="0" max="5">
+                        <small class="text-muted">Extra lines added between paragraphs</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="savePageSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header/Footer Modal -->
+    <div class="modal fade" id="headerFooterModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Header and Footer</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Header Content (RTF or plain text)</label>
+                        <textarea class="form-control" id="headerContent" rows="2" placeholder="Enter header content (e.g., Confidential)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Footer Content (RTF or plain text, use {{page}} for page number)</label>
+                        <textarea class="form-control" id="footerContent" rows="2" placeholder="Enter footer content (e.g., Page {{page}} of Company)"></textarea>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tip:</strong> These will appear on all pages after the Table of Contents. Use <code>{{page}}</code> to insert the page number in the footer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveHeaderFooter()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Info Modal -->
+    <div class="modal fade" id="documentInfoModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Document Info Table</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="documentInfoForm">
+                        <div class="mb-2"><label class="form-label">Document Title</label><input type="text" class="form-control" id="docInfoTitle"></div>
+                        <div class="mb-2"><label class="form-label">Author</label><input type="text" class="form-control" id="docInfoAuthor"></div>
+                        <div class="mb-2"><label class="form-label">Document Owner</label><input type="text" class="form-control" id="docInfoDocOwner"></div>
+                        <div class="mb-2"><label class="form-label">Process Owner</label><input type="text" class="form-control" id="docInfoProcOwner"></div>
+                        <div class="mb-2"><label class="form-label">Version No</label><input type="text" class="form-control" id="docInfoVersion"></div>
+                        <div class="mb-2"><label class="form-label">Effective Date</label><input type="date" class="form-control" id="docInfoEffDate"></div>
+                        <div class="mb-2"><label class="form-label">Last Reviewed Date</label><input type="date" class="form-control" id="docInfoLastRev"></div>
+                        <div class="mb-2"><label class="form-label">Next Reviewed Date</label><input type="date" class="form-control" id="docInfoNextRev"></div>
+                        <div class="mb-2"><label class="form-label">Document Link</label><input type="text" class="form-control" id="docInfoLink"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveDocumentInfo()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="libs/bootstrap.bundle.min.js"></script>
+    <script src="libs/highlight.min.js"></script>
+    <script src="libs/jspdf.umd.min.js"></script>
+    <script src="libs/html2canvas.min.js"></script>
+
+    <script>
+        // Global state
+        let currentProject = null;
+        let projects = JSON.parse(localStorage.getItem('sysreptor_projects') || '[]');
+        let customFields = JSON.parse(localStorage.getItem('sysreptor_fields') || '[]');
+        let versionHistory = JSON.parse(localStorage.getItem('sysreptor_versions') || '[]');
+        let customChangelog = JSON.parse(localStorage.getItem('sysreptor_custom_changelog') || '{}');
+
+        // Templates will be loaded from templates.json
+        let templates = {};
+
+        // Initialize the application
+        // On DOMContentLoaded, fetch templates.json and then initialize
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if libraries are loaded
+            console.log('Checking library availability...');
+            console.log('JSZip library:', typeof JSZip);
+
+            // Use templates from templates.js
+            templates = window.templates || {};
+            renderProjects();
+            renderTemplates();
+            renderCustomFields();
+        });
+
+        // Project Management
+        function createProject() {
+            const name = document.getElementById('newProjectName').value;
+            const description = document.getElementById('newProjectDesc').value;
+            const templateKey = document.getElementById('newProjectTemplate').value;
+
+            if (!name) {
+                alert('Please enter a project name');
+                return;
+            }
+
+            // Defensive: check if templates is loaded and templateKey exists
+            console.log('Available templates:', templates);
+            console.log('Selected templateKey:', templateKey);
+            let templateSections = [];
+            if (templateKey) {
+                if (templates && templates[templateKey] && Array.isArray(templates[templateKey].sections)) {
+                    templateSections = [...templates[templateKey].sections];
+                } else {
+                    alert('Template not found or invalid. Please check templates.js and the template key.');
+                    return;
+                }
+            }
+
+            const project = {
+                id: Date.now().toString(),
+                name: name,
+                description: description,
+                status: 'draft',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                sections: templateSections.length > 0 ? templateSections : [
+                    { id: '1', title: 'Introduction', content: '' }
+                ]
+            };
+
+            projects.push(project);
+            saveProjects();
+            renderProjects();
+
+            // Close modal and select new project
+            bootstrap.Modal.getInstance(document.getElementById('newProjectModal')).hide();
+            selectProject(project.id);
+        }
+
+        function selectProject(projectId) {
+            currentProject = projects.find(p => p.id === projectId);
+            document.getElementById('currentProjectTitle').textContent = currentProject.name;
+            renderProjectContent();
+            // Update TOC when project is selected
+            setTimeout(() => updateTOCPreview(), 200);
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projectsList');
+            container.innerHTML = '';
+            
+            const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+            const filteredProjects = statusFilter === 'all' ? projects : projects.filter(p => p.status === statusFilter);
+            
+            if (filteredProjects.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-folder-open fa-2x mb-2"></i>
+                        <p class="mb-0">No projects found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredProjects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = `project-card ${currentProject?.id === project.id ? 'active' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1; cursor: pointer;" onclick="selectProject('${project.id}')">
+                            <h6 class="mb-1">${project.name}</h6>
+                            <small class="text-muted">${project.description || 'No description'}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="exportProjectAsJSON('${project.id}'); event.stopPropagation();" title="Export as JSON">
+                                <i class="fas fa-file-code"></i>
+                            </button>
+                            <select class="status-selector" onchange="updateProjectStatus('${project.id}', this.value)" onclick="event.stopPropagation()">
+                                <option value="draft" ${project.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                <option value="working" ${project.status === 'working' ? 'selected' : ''}>Working</option>
+                                <option value="publish" ${project.status === 'publish' ? 'selected' : ''}>Publish</option>
+                            </select>
+                            <button class="btn-delete" onclick="deleteProject('${project.id}'); event.stopPropagation();" title="Delete Project">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Updated: ${new Date(project.updatedAt).toLocaleDateString()}</small>
+                        <span class="status-badge status-${project.status}">${project.status}</span>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function filterProjects() {
+            renderProjects();
+        }
+
+        function renderProjectContent() {
+            const container = document.getElementById('contentArea');
+            
+            if (!currentProject) {
+                // Show default state when no project is selected
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Select a project to get started</h5>
+                        <p class="text-muted">Or create a new project to begin documenting</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show project content when a project is selected
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="mb-1">${currentProject.name}</h5>
+                        <p class="text-muted mb-0">${currentProject.description || 'No description'}</p>
+                        <div class="mt-2">
+                            <span class="status-badge status-${currentProject.status}">${currentProject.status}</span>
+                            <small class="text-muted ms-2">Last updated: ${new Date(currentProject.updatedAt).toLocaleString()}</small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" onchange="updateProjectStatus('${currentProject.id}', this.value)" style="width: auto;">
+                            <option value="draft" ${currentProject.status === 'draft' ? 'selected' : ''}>Draft</option>
+                            <option value="working" ${currentProject.status === 'working' ? 'selected' : ''}>Working</option>
+                            <option value="publish" ${currentProject.status === 'publish' ? 'selected' : ''}>Publish</option>
+                        </select>
+                        <button class="btn btn-outline-primary" onclick="addSection()">
+                            <i class="fas fa-plus me-1"></i>Add Section
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="saveProject()">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                    </div>
+                </div>
+                <div id="sectionsContainer"></div>
+            `;
+            
+            renderSections();
+        }
+
+        function renderSections() {
+            tinymce.remove(); // Clean up all TinyMCE editors before re-rendering
+            if (!currentProject) return;
+            const container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+            currentProject.sections.forEach((section, index) => {
+                renderSubsectionTree(section, [index], container, 0);
+            });
+        }
+        // Recursive rendering for sections and sub-sections
+        function renderSubsectionTree(node, path, parentContainer, depth) {
+            const numberStr = path.map(i => i + 1).join('.');
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = depth === 0 ? 'section-item' : 'subsection-item';
+            nodeDiv.style.marginLeft = '';
+            nodeDiv.style.marginBottom = '16px';
+            nodeDiv.setAttribute('id', `section-${path.join('-')}`);
+            nodeDiv.innerHTML = `
+                <div class="d-flex align-items-center mb-1" style="justify-content: space-between;">
+                  <div class="d-flex align-items-center" style="gap: 8px;">
+                    <input type="text" class="form-control form-control-sm" value="${node.title}" style="width: 220px;"
+                        onchange="updateSubsectionTitleByPath(${JSON.stringify(path)}, this.value)">
+                    <button class="btn btn-sm btn-outline-danger btn-icon" onclick="removeSubsectionByPath(${JSON.stringify(path)})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary btn-icon" onclick="addSubsectionByPath(${JSON.stringify(path)})">
+                        <i class="fas fa-plus"></i> Sub-section
+                    </button>
+                  </div>
+                  <span class="badge bg-secondary" style="font-size: 1em;">${numberStr}</span>
+                </div>
+                <textarea id="editor-${path.join('-')}" class="tinymce-editor"></textarea>
+                <div id="subsections-${path.join('-')}" class="subsections-container"></div>
+            `;
+            parentContainer.appendChild(nodeDiv);
+            // Initialize TinyMCE
+            tinymce.init({
+                selector: `#editor-${path.join('-')}`,
+                menubar: false,
+                plugins: 'lists link image code table advlist fontfamily fontsize',
+                toolbar: 'undo redo | formatselect fontfamily fontsize | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
+                height: 200,
+                font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt',
+                font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
+                setup: function(editor) {
+                    editor.on('init', function() {
+                        editor.setContent(node.content || '');
+                    });
+                    editor.on('Change KeyUp', function() {
+                        setNodeContentByPath(path, editor.getContent());
+                        currentProject.updatedAt = new Date().toISOString();
+                        setTimeout(() => updateTOCPreview(), 500);
+                    });
+                }
+            });
+            // Render children
+            if (node.subsections && node.subsections.length > 0) {
+                const subContainer = nodeDiv.querySelector(`#subsections-${path.join('-')}`);
+                node.subsections.forEach((sub, idx) => {
+                    renderSubsectionTree(sub, path.concat(idx), subContainer, depth + 1);
+                });
+            }
+        }
+        // Helper functions for recursive data access
+        function getNodeByPath(path) {
+            let node = currentProject.sections[path[0]];
+            for (let i = 1; i < path.length; i++) {
+                node = node.subsections[path[i]];
+            }
+            return node;
+        }
+        function setNodeContentByPath(path, content) {
+            let node = getNodeByPath(path);
+            node.content = content;
+        }
+        function updateSubsectionTitleByPath(path, value) {
+            let node = getNodeByPath(path);
+            node.title = value;
+            currentProject.updatedAt = new Date().toISOString();
+            setTimeout(() => updateTOCPreview(), 100);
+        }
+        function removeSubsectionByPath(path) {
+            if (path.length === 1) {
+                currentProject.sections.splice(path[0], 1);
+            } else {
+                let parent = getNodeByPath(path.slice(0, -1));
+                parent.subsections.splice(path[path.length - 1], 1);
+            }
+            renderSections();
+        }
+        function addSubsectionByPath(path) {
+            let node = getNodeByPath(path);
+            if (!node.subsections) node.subsections = [];
+            node.subsections.push({
+                id: Date.now().toString(),
+                title: 'New Sub-section',
+                content: '',
+                subsections: []
+            });
+            renderSections();
+        }
+
+        function addSection() {
+            if (!currentProject) return;
+            currentProject.sections.push({
+                id: Date.now().toString(),
+                title: 'New Section',
+                content: '',
+                subsections: []
+            });
+            renderSections();
+        }
+
+        function removeSection(index) {
+            if (!currentProject) return;
+            
+            currentProject.sections.splice(index, 1);
+            renderSections();
+        }
+
+        function moveSection(index, direction) {
+            if (!currentProject) return;
+            
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= currentProject.sections.length) return;
+            
+            [currentProject.sections[index], currentProject.sections[newIndex]] = 
+            [currentProject.sections[newIndex], currentProject.sections[index]];
+            
+            renderSections();
+        }
+
+        function updateSectionTitle(index, title) {
+            if (!currentProject) return;
+            
+            currentProject.sections[index].title = title;
+            currentProject.updatedAt = new Date().toISOString();
+            // Update TOC when title changes
+            setTimeout(() => updateTOCPreview(), 100);
+        }
+
+        function saveProject() {
+            if (!currentProject) return;
+            
+            const projectIndex = projects.findIndex(p => p.id === currentProject.id);
+            if (projectIndex !== -1) {
+                projects[projectIndex] = { ...currentProject };
+                saveProjects();
+                
+                // Add to version history
+                versionHistory.push({
+                    id: Date.now().toString(),
+                    projectId: currentProject.id,
+                    timestamp: new Date().toISOString(),
+                    description: 'Manual save'
+                });
+                saveVersionHistory();
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success position-fixed';
+                toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+                toast.textContent = 'Project saved successfully!';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        function deleteProject(projectId) {
+            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                return;
+            }
+            
+            // Remove from projects array
+            projects = projects.filter(p => p.id !== projectId);
+            saveProjects();
+            
+            // Remove from version history
+            versionHistory = versionHistory.filter(v => v.projectId !== projectId);
+            saveVersionHistory();
+            
+            // Remove custom changelog if exists
+            if (customChangelog[projectId]) {
+                delete customChangelog[projectId];
+                saveCustomChangelog();
+            }
+            
+            // If this was the current project, clear it and refresh the main editor window
+            if (currentProject && currentProject.id === projectId) {
+                currentProject = null;
+                // Update the project title in the top bar
+                document.getElementById('currentProjectTitle').textContent = 'Select a Project';
+                // Refresh the main content area to show the default "select a project" message
+                renderProjectContent();
+                // Clear any TinyMCE editors to prevent memory leaks
+                tinymce.remove();
+            }
+            
+            // Re-render projects list
+            renderProjects();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-info position-fixed';
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+            toast.textContent = 'Project deleted successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function updateProjectStatus(projectId, newStatus) {
+            const project = projects.find(p => p.id === projectId);
+            if (project) {
+                project.status = newStatus;
+                project.updatedAt = new Date().toISOString();
+                saveProjects();
+                
+                // Add to version history
+                versionHistory.push({
+                    id: Date.now().toString(),
+                    projectId: projectId,
+                    timestamp: new Date().toISOString(),
+                    description: `Status changed to ${newStatus}`
+                });
+                saveVersionHistory();
+                
+                // Update current project if it's the one being updated
+                if (currentProject && currentProject.id === projectId) {
+                    currentProject.status = newStatus;
+                    currentProject.updatedAt = new Date().toISOString();
+                }
+                
+                // Re-render projects list
+                renderProjects();
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success position-fixed';
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+                toast.textContent = `Project status updated to ${newStatus}!`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        // Templates
+        function renderTemplates() {
+            const container = document.getElementById('templatesList');
+            container.innerHTML = '';
+            
+            Object.entries(templates).forEach(([key, template]) => {
+                const card = document.createElement('div');
+                card.className = 'template-card';
+                card.onclick = () => showTemplatePreview(key);
+                
+                card.innerHTML = `
+                    <h6 class="mb-2">${template.name}</h6>
+                    <small class="text-muted">${template.sections.length} sections</small>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function showTemplatePreview(templateKey) {
+            const template = templates[templateKey];
+            alert(`Template: ${template.name}\nSections: ${template.sections.map(s => s.title).join(', ')}`);
+        }
+
+        // Custom Fields
+        function addCustomField() {
+            const name = document.getElementById('newFieldName').value;
+            const value = document.getElementById('newFieldValue').value;
+            const type = document.getElementById('newFieldType').value;
+            
+            if (!name) {
+                alert('Please enter a field name');
+                return;
+            }
+
+            customFields.push({
+                id: Date.now().toString(),
+                name: name,
+                value: value,
+                type: type
+            });
+            
+            saveCustomFields();
+            renderCustomFields();
+            
+            bootstrap.Modal.getInstance(document.getElementById('newFieldModal')).hide();
+        }
+
+        function renderCustomFields() {
+            const container = document.getElementById('customFieldsList');
+            container.innerHTML = '';
+            
+            customFields.forEach(field => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'field-item';
+                fieldDiv.innerHTML = `
+                    <input type="text" class="form-control form-control-sm" 
+                           value="${field.value}" 
+                           onchange="updateFieldValue('${field.id}', this.value)"
+                           placeholder="${field.name}">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeField('${field.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                container.appendChild(fieldDiv);
+            });
+        }
+
+        function updateFieldValue(fieldId, value) {
+            const field = customFields.find(f => f.id === fieldId);
+            if (field) {
+                field.value = value;
+                saveCustomFields();
+            }
+        }
+
+        function removeField(fieldId) {
+            customFields = customFields.filter(f => f.id !== fieldId);
+            saveCustomFields();
+            renderCustomFields();
+        }
+
+        // Export Functions
+        async function exportDocument(format) {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+
+            switch (format) {
+                case 'doc':
+                    await exportToWord();
+                    break;
+                case 'docx':
+                    await exportToDocx();
+                    break;
+                case 'pdf':
+                    await exportToPDF();
+                    break;
+            }
+        }
+
+        async function exportToDocx() {
+            try {
+                console.log('Starting DOCX export...');
+                updateAllSectionContents();
+                saveProject();
+                const zip = new JSZip();
+                // Create the document structure
+                const documentXml = createDocxDocument();
+                const stylesXml = createDocxStyles();
+                const numberingXml = createDocxNumbering();
+                const settingsXml = createDocxSettings();
+                const contentTypesXml = createDocxContentTypes();
+                const relsXml = createDocxRels();
+                // Add files to zip
+                zip.file('word/document.xml', documentXml);
+                zip.file('word/styles.xml', stylesXml);
+                zip.file('word/numbering.xml', numberingXml);
+                zip.file('word/settings.xml', settingsXml);
+                zip.file('[Content_Types].xml', contentTypesXml);
+                zip.file('_rels/.rels', relsXml);
+                zip.file('word/_rels/document.xml.rels', createDocxDocumentRels());
+                // Generate and download
+                const blob = await zip.generateAsync({type: 'blob'});
+                downloadFile(blob, `${currentProject.name.replace(/[^a-z0-9]/gi, '_')}.docx`);
+                console.log('DOCX export completed successfully');
+            } catch (error) {
+                console.error('Error in DOCX export:', error);
+                try {
+                    const documentXml = createDocxDocument();
+                    console.log('Generated document.xml (first 1000 chars):', documentXml.slice(0, 1000));
+                } catch (e) {
+                    console.error('Error generating document.xml:', e);
+                }
+                alert('Error creating DOCX file. Please try again.');
+            }
+        }
+
+        async function exportToPDF() {
+            updateAllSectionContents();
+            saveProject();
+            const doc = new window.jspdf.jsPDF();
+            let y = 20;
+            y += 84; // Title offset
+            doc.setFontSize(24);
+            doc.setFont(undefined, 'bold');
+            doc.text(currentProject.name, 105, y, { align: 'center' });
+            y += 20;
+            if (currentProject.description) {
+                doc.setFontSize(14);
+                doc.setFont(undefined, 'normal');
+                const descLines = doc.splitTextToSize(currentProject.description, 170);
+                doc.text(descLines, 105, y, { align: 'center' });
+                y += descLines.length * 7 + 10;
+            }
+            const info = getDocumentInfo(currentProject.id);
+            y += 9 * 7;
+            y = generateDocInfoTablePDF(doc, info, y);
+            y += 10 * 7;
+            
+            // Add changelog page between title and TOC
+            doc.addPage();
+            y = 20;
+            // Add 5 lines of spacing from top
+            y += 35; // 5 lines * 7 points per line
+            
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Document Changelog', 20, y);
+            y += 20;
+            
+            // Get changelog data
+            const changelogData = customChangelog[currentProject.id];
+            let changelogRows = [];
+            
+            if (changelogData) {
+                try {
+                    changelogRows = JSON.parse(changelogData);
+                } catch (e) {
+                    console.error('Error parsing changelog data:', e);
+                }
+            }
+            
+            if (changelogRows && changelogRows.length > 0) {
+                // Create table headers
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                const headers = ['Version Number', 'Approved Date', 'Author', 'Reviewer', 'Approver for Change', 'Description'];
+                const colWidths = [25, 25, 25, 25, 30, 50];
+                const colStarts = [20, 45, 70, 95, 120, 150];
+                
+                // Draw table headers
+                headers.forEach((header, index) => {
+                    doc.text(header, colStarts[index], y);
+                });
+                y += 8;
+                
+                // Draw header line
+                doc.line(20, y, 190, y);
+                y += 5;
+                
+                // Draw table rows
+                doc.setFont(undefined, 'normal');
+                changelogRows.forEach((row, rowIndex) => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    const rowData = [
+                        row.version || '',
+                        row.date || '',
+                        row.author || '',
+                        row.reviewer || '',
+                        row.approver || '',
+                        row.desc || ''
+                    ];
+                    
+                    // Draw row content
+                    rowData.forEach((cell, colIndex) => {
+                        const cellText = doc.splitTextToSize(cell, colWidths[colIndex] - 2);
+                        doc.text(cellText, colStarts[colIndex], y);
+                    });
+                    
+                    y += Math.max(8, rowData[5] ? doc.splitTextToSize(rowData[5], 48).length * 4 : 8);
+                    
+                    // Draw row line
+                    doc.line(20, y, 190, y);
+                    y += 3;
+                });
+            } else {
+                // Fallback to version history if no custom changelog
+                const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id).slice(-5);
+                if (projectVersions.length > 0) {
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Version', 20, y);
+                    doc.text('Description', 50, y);
+                    doc.text('Date', 140, y);
+                    y += 5;
+                    doc.setFont(undefined, 'normal');
+                    projectVersions.forEach((version, index) => {
+                        doc.text((projectVersions.length - index).toString(), 20, y);
+                        doc.text(version.description, 50, y);
+                        doc.text(new Date(version.timestamp).toLocaleDateString(), 140, y);
+                        y += 5;
+                    });
+                    y += 5;
+                } else {
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('No version history available.', 20, y);
+                    y += 10;
+                }
+            }
+            
+            doc.addPage();
+            y = 20;
+            doc.setFontSize(22);
+            doc.setTextColor(37, 99, 235);
+            doc.setFont(undefined, 'bold');
+            doc.text('Table of Contents', 20, y);
+            y += 12;
+            doc.setFontSize(12);
+            doc.setTextColor(0,0,0);
+            doc.setFont('helvetica', 'normal');
+            const toc = generateTOC();
+            toc.forEach((item, idx) => {
+                let entryNum = `${item.number}.`;
+                let entryTitle = item.title;
+                let pageNum = `${4 + idx}`;
+                const leftX = 20;
+                const numWidth = doc.getTextWidth(entryNum + ' ');
+                const titleWidth = doc.getTextWidth(entryTitle + ' ');
+                const pageWidth = doc.getTextWidth(pageNum);
+                const rightX = 200;
+                const dotsStart = leftX + numWidth + titleWidth + 2;
+                const dotsEnd = rightX - pageWidth - 2;
+                let dots = '';
+                let dotsWidth = doc.getTextWidth('.')
+                let dotsCount = Math.floor((dotsEnd - dotsStart) / dotsWidth);
+                for (let i = 0; i < dotsCount; i++) dots += '.';
+                doc.text(entryNum, leftX, y);
+                doc.text(entryTitle, leftX + numWidth, y);
+                doc.text(dots, dotsStart, y);
+                doc.text(pageNum, rightX, y, { align: 'right' });
+                y += 8;
+            });
+            if (customFields.length > 0) {
+                y += 20;
+                doc.setFontSize(12);
+                doc.setFont(undefined, 'bold');
+                doc.text('Project Information', 20, y);
+                y += 10;
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.text('Field Name', 20, y);
+                doc.text('Value', 100, y);
+                y += 5;
+                doc.setFont(undefined, 'normal');
+                customFields.forEach(field => {
+                    doc.text(field.name, 20, y);
+                    doc.text(field.value || 'N/A', 100, y);
+                    y += 5;
+                });
+                y += 5;
+            }
+            doc.addPage();
+            y = 20;
+            function renderUnderline(doc, text, x, y, fontSize, font) {
+                // Simulate underline by drawing a line under the text
+                const textWidth = doc.getTextWidth(text);
+                const descent = fontSize * 0.1;
+                doc.line(x, y + descent, x + textWidth, y + descent);
+            }
+            function renderRuns(doc, runs, x, y, baseFont, baseSize) {
+                let curX = x;
+                for (let run of runs) {
+                    let font = 'helvetica';
+                    if (run.fontFamily) {
+                        const fam = run.fontFamily.toLowerCase();
+                        if (fam.includes('times')) font = 'times';
+                        else if (fam.includes('courier')) font = 'courier';
+                    }
+                    let size = run.fontSize || baseSize || 10;
+                    let style = 'normal';
+                    if (run.bold && run.italic) style = (font === 'helvetica') ? 'boldoblique' : 'bolditalic';
+                    else if (run.bold) style = 'bold';
+                    else if (run.italic) style = (font === 'helvetica') ? 'oblique' : 'italic';
+                    // Fallback: if italic is not available, use normal
+                    try { doc.setFont(font, style); } catch { doc.setFont(font, 'normal'); }
+                    doc.setFontSize(size);
+                    let text = run.text;
+                    if (run.isLink && run.href) text += ` [${run.href}]`;
+                    doc.text(text, curX, y, { baseline: 'top' });
+                    if (run.underline) renderUnderline(doc, text, curX, y, size, font);
+                    curX += doc.getTextWidth(text);
+                }
+            }
+            function exportSectionTree(node, numberParts) {
+                const numberStr = numberParts.join('.');
+                const fontSize = 16 - numberParts.length * 2;
+                doc.setFontSize(fontSize);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`${numberStr} ${node.title}`, 20, y);
+                y += 10;
+                // Main content
+                if (node.content) {
+                    const blocks = htmlToPdfRuns(node.content);
+                    for (let block of blocks) {
+                        let align = block.align || 'left';
+                        let lineHeight = 7;
+                        // Handle lists
+                        if (block.isList) {
+                            // Always use standard font/size for bullet/number and text
+                            let bulletText = block.isNumbered ? `${block.listIndex}.` : '\u2022';
+                            let bulletX = 25;
+                            let textX = 35;
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(10);
+                            // Render bullet/number
+                            doc.text(bulletText, bulletX, y);
+                            // Render the runs for the list item, always with font size 10, normal
+                            renderRuns(doc, block.runs, textX, y, 'helvetica', 10);
+                        } else {
+                            let x = 20;
+                            if (align === 'center') x = 105;
+                            if (align === 'right') x = 200;
+                            renderRuns(doc, block.runs, x, y, 'helvetica', 10);
+                        }
+                        y += lineHeight;
+                        if (y > 270) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                    }
+                } else {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('[No content available]', 20, y);
+                    y += 7;
+                }
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                if (node.subsections && node.subsections.length > 0) {
+                    node.subsections.forEach((sub, idx) => {
+                        exportSectionTree(sub, numberParts.concat(idx + 1));
+                    });
+                }
+            }
+            currentProject.sections.forEach((section, index) => {
+                exportSectionTree(section, [index + 1]);
+            });
+            doc.save(`${currentProject.name}.pdf`);
+        }
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Version History
+        function showVersionHistory() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id);
+            const container = document.getElementById('versionHistoryList');
+            container.innerHTML = '';
+            
+            projectVersions.forEach(version => {
+                const versionDiv = document.createElement('div');
+                versionDiv.className = 'version-item';
+                versionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>${version.description}</strong>
+                            <br>
+                            <small class="text-muted">${new Date(version.timestamp).toLocaleString()}</small>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(versionDiv);
+            });
+            
+            new bootstrap.Modal(document.getElementById('versionHistoryModal')).show();
+        }
+
+        // Utility Functions
+        function showNewProjectModal() {
+            new bootstrap.Modal(document.getElementById('newProjectModal')).show();
+        }
+
+        function showNewFieldModal() {
+            new bootstrap.Modal(document.getElementById('newFieldModal')).show();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        // Storage Functions
+        function saveProjects() {
+            localStorage.setItem('sysreptor_projects', JSON.stringify(projects));
+        }
+
+        function saveCustomFields() {
+            localStorage.setItem('sysreptor_fields', JSON.stringify(customFields));
+        }
+
+        function saveVersionHistory() {
+            localStorage.setItem('sysreptor_versions', JSON.stringify(versionHistory));
+        }
+
+        function saveCustomChangelog() {
+            // This function is kept for backward compatibility but now uses the table data
+            if (currentProject) {
+                // The data is already saved in updateChangelogCell, just ensure it's persisted
+                localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            }
+        }
+
+        function showCustomChangelogModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            renderChangelogTable();
+            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+        }
+
+        // Auto-save every 30 seconds
+        setInterval(() => {
+            if (currentProject) {
+                saveProject();
+            }
+        }, 30000);
+
+        // --- TOC PREVIEW STYLE ---
+        function updateTOCPreview() {
+            if (!currentProject) {
+                const container = document.getElementById('tocPreview');
+                if (container) {
+                    container.innerHTML = '<small class="text-muted">Select a project to see TOC</small>';
+                }
+                return;
+            }
+            const toc = generateTOC();
+            const pageMap = calculatePageNumbers();
+            const container = document.getElementById('tocPreview');
+            if (!container) return;
+            container.innerHTML = '';
+            // Add page summary
+            const totalPages = pageMap.length ? pageMap[pageMap.length - 1] : '';
+            container.innerHTML += `<div class="mb-2"><strong>Estimated Pages:</strong> <span class="text-muted">${totalPages || ''} total</span></div>`;
+            // TOC Title
+            container.innerHTML += `<div style="font-size:1.3em;font-weight:bold;color:#2563eb;margin-bottom:8px;">Table of Contents</div>`;
+            // TOC Items (no dotted leader or page number)
+            toc.forEach((item, idx) => {
+                container.innerHTML += `<div class="toc-item level-${item.level}" data-path="${item.path}" style="padding-left:${(item.level - 1) * 16}px; cursor:pointer;"><span style="font-weight:bold;">${item.number}.</span> ${item.title}</div>`;
+            });
+            // Add click handler for TOC navigation
+            container.onclick = function(e) {
+                const item = e.target.closest('.toc-item[data-path]');
+                if (item) {
+                    const section = document.getElementById('section-' + item.dataset.path);
+                    if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }
+            };
+        }
+
+        // Helper function to convert HTML to RTF
+        function convertHtmlToRtf(htmlContent) {
+            console.log('convertHtmlToRtf called with:', htmlContent);
+            
+            if (!htmlContent || htmlContent.trim() === '') {
+                console.log('Empty content detected, returning placeholder');
+                return '\\par [No content available]\\par';
+            }
+            
+            try {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = htmlContent;
+                
+                // Check if the content is just empty paragraphs
+                const textContent = tempDiv.textContent || tempDiv.innerText || '';
+                console.log('Text content extracted:', textContent);
+                if (!textContent.trim()) {
+                    console.log('No text content found in HTML, returning placeholder');
+                    return '\\par [No content available]\\par';
+                }
+                
+                function imageToRtfPict(img) {
+                    const src = img.getAttribute('src');
+                    if (!src || !src.startsWith('data:image/')) return '[Image not exported]';
+                    // Extract base64 data
+                    const match = src.match(/^data:image\/(png|jpeg);base64,(.*)$/);
+                    if (!match) return '[Image not exported]';
+                    const format = match[1];
+                    const base64 = match[2];
+                    // Convert base64 to hex
+                    const binary = atob(base64);
+                    let hex = '';
+                    for (let i = 0; i < binary.length; i++) {
+                        let h = binary.charCodeAt(i).toString(16);
+                        if (h.length < 2) h = '0' + h;
+                        hex += h;
+                    }
+                    // Get width/height from style or attributes
+                    let width = '';
+                    let height = '';
+                    if (img.style && img.style.width) {
+                        width = parseInt(img.style.width);
+                    } else if (img.getAttribute('width')) {
+                        width = parseInt(img.getAttribute('width'));
+                    }
+                    if (img.style && img.style.height) {
+                        height = parseInt(img.style.height);
+                    } else if (img.getAttribute('height')) {
+                        height = parseInt(img.getAttribute('height'));
+                    }
+                    // If width/height are in px, convert to twips (1 px = 15 twips)
+                    if (width) width = Math.round(width * 15);
+                    if (height) height = Math.round(height * 15);
+                    let sizeStr = '';
+                    if (width) sizeStr += ` \\picwgoal${width}`;
+                    if (height) sizeStr += ` \\pichgoal${height}`;
+                    let pictType = format === 'png' ? '\\pngblip' : '\\jpegblip';
+                    return `\\par \\pict${pictType}${sizeStr} ${hex} \\par`;
+                }
+                
+                function walk(node) {
+                    let rtf = '';
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const text = node.textContent.replace(/\s+/g, ' ');
+                        return text;
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+                    
+                    const tag = node.tagName.toLowerCase();
+                    
+                    if (tag === 'img') {
+                        return imageToRtfPict(node);
+                    }
+                    if (tag === 'br') return '\\par ';
+                    if (tag === 'p' || tag === 'div') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        // Only add paragraph break if there's actual content
+                        if (inner.trim()) {
+                            return inner + '\\par ';
+                        } else {
+                            return inner;
+                        }
+                    }
+                    if (tag === 'li') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\bullet ' + inner + '\\par ';
+                    }
+                    if (tag === 'ul' || tag === 'ol') {
+                        return Array.from(node.childNodes).map(walk).join('');
+                    }
+                    if (tag === 'strong' || tag === 'b') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\b ' + inner + '\\b0 ';
+                    }
+                    if (tag === 'em' || tag === 'i') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\i ' + inner + '\\i0 ';
+                    }
+                    if (tag === 'u') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\ul ' + inner + '\\ul0 ';
+                    }
+                    if (tag === 'h1') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\b\\fs28 ' + inner + '\\b0\\fs24\\par ';
+                    }
+                    if (tag === 'h2') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\b\\fs24 ' + inner + '\\b0\\fs24\\par ';
+                    }
+                    if (tag === 'h3') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\b\\fs20 ' + inner + '\\b0\\fs24\\par ';
+                    }
+                    if (tag === 'blockquote') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\par \\i ' + inner + '\\i0\\par ';
+                    }
+                    if (tag === 'pre') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\par \\f1 ' + inner + '\\f0\\par ';
+                    }
+                    if (tag === 'code') {
+                        let inner = Array.from(node.childNodes).map(walk).join('');
+                        return '\\f1 ' + inner + '\\f0 ';
+                    }
+                    // Inline elements: span, a, etc.
+                    if (['span', 'a'].includes(tag)) {
+                        return Array.from(node.childNodes).map(walk).join('');
+                    }
+                    // Fallback: walk children
+                    return Array.from(node.childNodes).map(walk).join('');
+                }
+                
+                let rtfText = walk(tempDiv);
+                
+                // Convert HTML entities
+                rtfText = rtfText.replace(/&nbsp;/g, ' ');
+                rtfText = rtfText.replace(/&amp;/g, '&');
+                rtfText = rtfText.replace(/&lt;/g, '<');
+                rtfText = rtfText.replace(/&gt;/g, '>');
+                rtfText = rtfText.replace(/&quot;/g, '"');
+                rtfText = rtfText.replace(/&#39;/g, "'");
+                
+                // Clean up multiple line breaks
+                rtfText = rtfText.replace(/\\par(\\par)+/g, '\\par\\par');
+                
+                // Remove leading/trailing whitespace
+                rtfText = rtfText.trim();
+                
+                if (!rtfText || rtfText.length === 0) {
+                    console.log('RTF conversion resulted in empty text, trying fallback approach');
+                    // Fallback: try to extract plain text and convert to RTF
+                    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+                    if (plainText.trim()) {
+                        console.log('Using fallback plain text conversion');
+                        return plainText.replace(/\n/g, '\\par ') + '\\par';
+                    }
+                    console.log('No content available, returning placeholder');
+                    return '\\par [No content available]\\par';
+                }
+                
+                // Additional fallback: if RTF is too short, try simple HTML stripping
+                if (rtfText.length < 10) {
+                    console.log('RTF output too short, trying HTML stripping approach');
+                    const strippedText = htmlContent.replace(/<[^>]+>/g, '').trim();
+                    if (strippedText) {
+                        console.log('Using HTML stripping fallback');
+                        return strippedText.replace(/\n/g, '\\par ') + '\\par';
+                    }
+                }
+                
+                console.log('RTF conversion successful, length:', rtfText.length);
+                return rtfText;
+                
+            } catch (error) {
+                console.error('Error in convertHtmlToRtf:', error);
+                return '\\par [Error converting content]\\par';
+            }
+        }
+
+        // Header/Footer Modal logic
+        function showHeaderFooterModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            // Load from localStorage or project
+            let headerFooter = JSON.parse(localStorage.getItem('sysreptor_header_footer') || '{}');
+            let projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
+            document.getElementById('headerContent').value = projectHeaderFooter.header || '';
+            document.getElementById('footerContent').value = projectHeaderFooter.footer || '';
+            const modal = new bootstrap.Modal(document.getElementById('headerFooterModal'));
+            modal.show();
+        }
+        function saveHeaderFooter() {
+            if (!currentProject) return;
+            let headerFooter = JSON.parse(localStorage.getItem('sysreptor_header_footer') || '{}');
+            headerFooter[currentProject.id] = {
+                header: document.getElementById('headerContent').value,
+                footer: document.getElementById('footerContent').value
+            };
+            localStorage.setItem('sysreptor_header_footer', JSON.stringify(headerFooter));
+            bootstrap.Modal.getInstance(document.getElementById('headerFooterModal')).hide();
+        }
+
+        // Test function to debug content capture
+        function testContentCapture() {
+            console.log('=== TESTING CONTENT CAPTURE ===');
+            if (!currentProject) {
+                console.log('No current project selected');
+                return;
+            }
+            
+            console.log('Current project sections:', currentProject.sections);
+            
+            currentProject.sections.forEach((section, index) => {
+                console.log(`\n--- Section ${index}: ${section.title} ---`);
+                console.log('Section content from data:', section.content);
+                
+                const editorElement = document.querySelector(`#editor-${index}`);
+                console.log('Editor element found:', !!editorElement);
+                
+                if (editorElement) {
+                    const editorId = `editor-${index}`;
+                    const editor = tinymce.get(editorId);
+                    console.log('TinyMCE instance found:', !!editor);
+                    
+                    if (editor) {
+                        const editorContent = editor.getContent();
+                        console.log('Editor content:', editorContent);
+                        console.log('Content matches:', section.content === editorContent);
+                        
+                        // Force update the section content
+                        currentProject.sections[index].content = editorContent;
+                        console.log('Updated section content:', currentProject.sections[index].content);
+                    }
+                }
+            });
+            
+            // Save the project after updating
+            updateAllSectionContents();
+            saveProject();
+            console.log('Project saved with updated content');
+        }
+
+        // Test function to debug RTF conversion
+        function testRtfConversion() {
+            console.log('=== TESTING RTF CONVERSION ===');
+            if (!currentProject) {
+                console.log('No current project selected');
+                return;
+            }
+            
+            currentProject.sections.forEach((section, index) => {
+                console.log(`\n--- Section ${index}: ${section.title} ---`);
+                console.log('Original HTML content:', section.content);
+                
+                if (section.content) {
+                    const rtfResult = convertHtmlToRtf(section.content);
+                    console.log('RTF conversion result:', rtfResult);
+                    
+                    // Also test the simple HTML stripping approach
+                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
+                    console.log('Stripped HTML text:', strippedText);
+                }
+            });
+        }
+
+        // Test function to create a minimal RTF document
+        function testMinimalRtf() {
+            console.log('=== TESTING MINIMAL RTF ===');
+            if (!currentProject) {
+                console.log('No current project selected');
+                return;
+            }
+            
+            let rtfContent = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}';
+            rtfContent += '\\f0\\fs24';
+            rtfContent += '\\viewkind4\\uc1\\pard\\plain\\f0\\fs24';
+            
+            currentProject.sections.forEach((section, index) => {
+                rtfContent += `\\b ${section.title}\\b0\\par\\par`;
+                if (section.content) {
+                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
+                    rtfContent += `${strippedText}\\par\\par`;
+                }
+            });
+            
+            rtfContent += '}';
+            
+            console.log('Minimal RTF content:', rtfContent);
+            
+            const blob = new Blob([rtfContent], { type: 'application/msword' });
+            downloadFile(blob, `${currentProject.name}_test.doc`);
+            console.log('Test RTF document created');
+        }
+
+        // Test function to create a plain text document
+        function testPlainText() {
+            console.log('=== TESTING PLAIN TEXT ===');
+            if (!currentProject) {
+                console.log('No current project selected');
+                return;
+            }
+            
+            let content = `${currentProject.name}\n`;
+            content += '='.repeat(currentProject.name.length) + '\n\n';
+            
+            currentProject.sections.forEach((section, index) => {
+                content += `${index + 1}. ${section.title}\n`;
+                content += '-'.repeat(section.title.length + 3) + '\n';
+                if (section.content) {
+                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
+                    content += strippedText + '\n\n';
+                } else {
+                    content += '[No content available]\n\n';
+                }
+            });
+            
+            console.log('Plain text content:', content);
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            downloadFile(blob, `${currentProject.name}_test.txt`);
+            console.log('Test plain text document created');
+        }
+
+        // Test function with hardcoded content
+        function testHardcodedContent() {
+            console.log('=== TESTING HARDCODED CONTENT ===');
+            if (!currentProject) {
+                console.log('No current project selected');
+                return;
+            }
+            
+            let content = `${currentProject.name}\n`;
+            content += '='.repeat(currentProject.name.length) + '\n\n';
+            
+            currentProject.sections.forEach((section, index) => {
+                content += `${index + 1}. ${section.title}\n`;
+                content += '-'.repeat(section.title.length + 3) + '\n';
+                content += `This is hardcoded content for section ${index + 1}.\n`;
+                content += `The section title is: ${section.title}\n`;
+                if (section.content) {
+                    content += `Original content length: ${section.content.length}\n`;
+                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
+                    content += `Stripped content: "${strippedText}"\n`;
+                } else {
+                    content += 'No content available in section data\n';
+                }
+                content += '\n';
+            });
+            
+            console.log('Hardcoded content:', content);
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            downloadFile(blob, `${currentProject.name}_hardcoded.txt`);
+            console.log('Hardcoded test document created');
+        }
+
+        // --- Remove all Quill-specific code and references ---
+        // --- Update content capture for export ---
+        // Before exporting, walk all sections and subsections recursively and update their .content from TinyMCE:
+        function updateAllSectionContents() {
+          function updateNodeContent(node, path) {
+            const editorId = `editor-${path.join('-')}`;
+            const editor = tinymce.get(editorId);
+            if (editor) {
+              node.content = editor.getContent();
+            }
+            if (node.subsections && node.subsections.length > 0) {
+              node.subsections.forEach((sub, idx) => {
+                updateNodeContent(sub, path.concat(idx));
+              });
+            }
+          }
+          if (currentProject && currentProject.sections) {
+            currentProject.sections.forEach((section, idx) => {
+              updateNodeContent(section, [idx]);
+            });
+          }
+        }
+        // Call updateAllSectionContents() before any export or saveProject() call.
+
+        // Add this helper function near your export functions:
+        function htmlToRtf(html) {
+          if (!html) return '';
+          let rtf = html
+            .replace(/<p[^>]*>/gi, '')
+            .replace(/<\/p>/gi, '\\par ')
+            .replace(/<br\s*\/?>/gi, '\\line ')
+            .replace(/\n/g, '\\line ')
+            .replace(/<b>/gi, '\\b ').replace(/<\/b>/gi, '\\b0 ')
+            .replace(/<strong>/gi, '\\b ').replace(/<\/strong>/gi, '\\b0 ')
+            .replace(/<i>/gi, '\\i ').replace(/<\/i>/gi, '\\i0 ')
+            .replace(/<em>/gi, '\\i ').replace(/<\/em>/gi, '\\i0 ')
+            .replace(/<u>/gi, '\\ul ').replace(/<\/u>/gi, '\\ul0 ')
+            .replace(/<[^>]+>/g, '');
+          return rtf;
+        }
+
+        // DOCX Helper Functions
+        function createDocxDocument() {
+            try {
+                console.log('createDocxDocument called');
+                console.log('currentProject:', currentProject);
+                if (!currentProject) {
+                    console.error('No currentProject defined!');
+                    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: No project data</w:t></w:r></w:p></w:body></w:document>`;
+                }
+                if (!currentProject.sections || !Array.isArray(currentProject.sections)) {
+                    console.error('No sections array in currentProject!');
+                    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: No sections</w:t></w:r></w:p></w:body></w:document>`;
+                }
+                currentProject.sections.forEach((section, idx) => {
+                    if (!section) {
+                        console.error('Section is undefined at index', idx);
+                    } else {
+                        console.log(`Section ${idx}:`, section);
+                        if (!section.title) {
+                            console.error(`Section ${idx} has no title!`, section);
+                        }
+                    }
+                });
+                let xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:body>
+        <w:sectPr>
+            <w:pgSz w:w="12240" w:h="15840"/>
+            <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>
+        </w:sectPr>`;
+                
+                // Title page
+                xml += `
+            <w:p>
+                <w:pPr>
+                    <w:jc w:val="center"/>
+                    <w:spacing w:after="480" w:before="480"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:sz w:val="72"/>
+                    </w:rPr>
+                    <w:t>${escapeXml(currentProject.name)}</w:t>
+                </w:r>
+            </w:p>`;
+                
+                if (currentProject.description) {
+                    xml += `
+            <w:p>
+                <w:pPr>
+                    <w:jc w:val="center"/>
+                    <w:spacing w:after="240"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:sz w:val="36"/>
+                    </w:rPr>
+                    <w:t>${escapeXml(currentProject.description)}</w:t>
+                </w:r>
+            </w:p>`;
+                }
+                
+                // Document Info Table (29 lines before)
+                const info = getDocumentInfo(currentProject.id);
+                for (let i = 0; i < 29; i++) xml += '<w:p></w:p>';
+                xml += generateDocInfoTableDOCX(info);
+                // Add 10 empty paragraphs after table
+                for (let i = 0; i < 10; i++) xml += '<w:p></w:p>';
+                // (No page break here! The next page break should be after the changelog, before the TOC)
+                
+                // Document Changelog Page
+                xml += `
+            <w:p>
+                <w:pPr>
+                    <w:spacing w:after="840" w:before="840"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:sz w:val="32"/>
+                    </w:rPr>
+                    <w:t>Document Changelog</w:t>
+                </w:r>
+            </w:p>`;
+                
+                // Get changelog data
+                const changelogData = customChangelog[currentProject.id];
+                let changelogRows = [];
+                
+                if (changelogData) {
+                    try {
+                        changelogRows = JSON.parse(changelogData);
+                    } catch (e) {
+                        console.error('Error parsing changelog data:', e);
+                    }
+                }
+                
+                if (changelogRows && changelogRows.length > 0) {
+                    // Create changelog table
+                    xml += `
+            <w:tbl>
+                <w:tblPr>
+                    <w:tblStyle w:val="TableGrid"/>
+                    <w:tblW w:w="0" w:type="auto"/>
+                    <w:tblBorders>
+                        <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                    </w:tblBorders>
+                </w:tblPr>
+                <w:tblGrid>
+                    <w:gridCol w:w="2000"/>
+                    <w:gridCol w:w="2000"/>
+                    <w:gridCol w:w="2000"/>
+                    <w:gridCol w:w="2000"/>
+                    <w:gridCol w:w="2400"/>
+                    <w:gridCol w:w="4000"/>
+                </w:tblGrid>`;
+                    
+                    // Table headers
+                    const headers = ['Version Number', 'Approved Date', 'Author', 'Reviewer', 'Approver for Change', 'Description'];
+                    xml += `
+                <w:tr>
+                    <w:trPr>
+                        <w:trHeight w:val="400"/>
+                    </w:trPr>`;
+                    headers.forEach(header => {
+                        xml += `
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="2000" w:type="dxa"/>
+                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:jc w:val="center"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:b/>
+                                    <w:color w:val="FFFFFF"/>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>${escapeXml(header)}</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>`;
+                    });
+                    xml += `
+                </w:tr>`;
+                    
+                    // Table rows
+                    changelogRows.forEach(row => {
+                        const rowData = [
+                            row.version || '',
+                            row.date || '',
+                            row.author || '',
+                            row.reviewer || '',
+                            row.approver || '',
+                            row.desc || ''
+                        ];
+                        
+                        xml += `
+                <w:tr>
+                    <w:trPr>
+                        <w:trHeight w:val="400"/>
+                    </w:trPr>`;
+                        
+                        rowData.forEach((cell, index) => {
+                            const colWidth = index === 4 ? 2400 : index === 5 ? 4000 : 2000;
+                            xml += `
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="${colWidth}" w:type="dxa"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:spacing w:after="0"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>${escapeXml(cell)}</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>`;
+                        });
+                        
+                        xml += `
+                </w:tr>`;
+                    });
+                    
+                    xml += `
+            </w:tbl>`;
+                } else {
+                    // Fallback to version history if no custom changelog
+                    const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id).slice(-5);
+                    if (projectVersions.length > 0) {
+                        xml += `
+            <w:tbl>
+                <w:tblPr>
+                    <w:tblStyle w:val="TableGrid"/>
+                    <w:tblW w:w="0" w:type="auto"/>
+                    <w:tblBorders>
+                        <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+                    </w:tblBorders>
+                </w:tblPr>
+                <w:tblGrid>
+                    <w:gridCol w:w="2000"/>
+                    <w:gridCol w:w="6000"/>
+                    <w:gridCol w:w="2000"/>
+                </w:tblGrid>
+                <w:tr>
+                    <w:trPr>
+                        <w:trHeight w:val="400"/>
+                    </w:trPr>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="2000" w:type="dxa"/>
+                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:jc w:val="center"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:b/>
+                                    <w:color w:val="FFFFFF"/>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>Version</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="6000" w:type="dxa"/>
+                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:jc w:val="center"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:b/>
+                                    <w:color w:val="FFFFFF"/>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>Description</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="2000" w:type="dxa"/>
+                            <w:shd w:val="clear" w:color="auto" w:fill="2563EB"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:jc w:val="center"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:b/>
+                                    <w:color w:val="FFFFFF"/>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>Date</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                </w:tr>`;
+                        
+                        projectVersions.forEach((version, index) => {
+                            xml += `
+                <w:tr>
+                    <w:trPr>
+                        <w:trHeight w:val="400"/>
+                    </w:trPr>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="2000" w:type="dxa"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:spacing w:after="0"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>${escapeXml((projectVersions.length - index).toString())}</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="6000" w:type="dxa"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:spacing w:after="0"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>${escapeXml(version.description)}</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                    <w:tc>
+                        <w:tcPr>
+                            <w:tcW w:w="2000" w:type="dxa"/>
+                        </w:tcPr>
+                        <w:p>
+                            <w:pPr>
+                                <w:spacing w:after="0"/>
+                            </w:pPr>
+                            <w:r>
+                                <w:rPr>
+                                    <w:sz w:val="20"/>
+                                </w:rPr>
+                                <w:t>${escapeXml(new Date(version.timestamp).toLocaleDateString())}</w:t>
+                            </w:r>
+                        </w:p>
+                    </w:tc>
+                </w:tr>`;
+                        });
+                        
+                        xml += `
+            </w:tbl>`;
+                    } else {
+                        xml += `
+            <w:p>
+                <w:r>
+                    <w:t>No version history available.</w:t>
+                </w:r>
+            </w:p>`;
+                    }
+                }
+                
+                // Page break
+                xml += `
+            <w:p>
+                <w:r>
+                    <w:br w:type="page"/>
+                </w:r>
+            </w:p>`;
+                
+                // Table of Contents
+                xml += `
+            <w:p>
+                <w:pPr>
+                    <w:pStyle w:val="TOCHeading"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:color w:val="2563EB"/>
+                        <w:sz w:val="44"/>
+                    </w:rPr>
+                    <w:t>Table of Contents</w:t>
+                </w:r>
+            </w:p>
+            <w:p>
+                <w:r>
+                    <w:fldChar w:fldCharType="begin"/>
+                </w:r>
+                <w:r>
+                    <w:instrText xml:space="preserve"> TOC \\o "1-3" \\h \\z \\u </w:instrText>
+                </w:r>
+                <w:r>
+                    <w:fldChar w:fldCharType="separate"/>
+                </w:r>
+                <w:r>
+                    <w:t>Click here to update the table of contents</w:t>
+                </w:r>
+                <w:r>
+                    <w:fldChar w:fldCharType="end"/>
+                </w:r>
+            </w:p>`;
+                
+                // Page break
+                xml += `
+            <w:p>
+                <w:r>
+                    <w:br w:type="page"/>
+                </w:r>
+            </w:p>`;
+                
+                // Main content
+                currentProject.sections.forEach((section, index) => {
+                    xml += `
+            <w:p>
+                <w:pPr>
+                    <w:pStyle w:val="Heading1"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:color w:val="2563EB"/>
+                        <w:sz w:val="32"/>
+                    </w:rPr>
+                    <w:t>${escapeXml(section.title)}</w:t>
+                </w:r>
+            </w:p>`;
+                    
+                    if (section.content) {
+                        const xmlContent = htmlToDocxXml(section.content);
+                        if (xmlContent) {
+                            xml += xmlContent;
+                        }
+                    }
+                    
+                    // Handle subsections recursively
+                    if (section.subsections && section.subsections.length > 0) {
+                        section.subsections.forEach((sub, subIndex) => {
+                            xml += `
+            <w:p>
+                <w:pPr>
+                    <w:pStyle w:val="Heading2"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:color w:val="2563EB"/>
+                        <w:sz w:val="28"/>
+                    </w:rPr>
+                    <w:t>${escapeXml(sub.title)}</w:t>
+                </w:r>
+            </w:p>`;
+                            
+                            if (sub.content) {
+                                const subXmlContent = htmlToDocxXml(sub.content);
+                                if (subXmlContent) {
+                                    xml += subXmlContent;
+                                }
+                            }
+                            
+                            // Recursively handle deeper subsections (all use Heading3 style)
+                            if (sub.subsections && sub.subsections.length > 0) {
+                                xml += processSubsectionsRecursively(sub.subsections);
+                            }
+                        });
+                    }
+                    
+                    // Add spacing between sections (but not after the last section)
+                    if (index < currentProject.sections.length - 1) {
+                        xml += `
+            <w:p>
+                <w:pPr>
+                    <w:spacing w:after="240"/>
+                </w:pPr>
+            </w:p>`;
+                    }
+                });
+                
+                xml += `
+    </w:body>
+</w:document>`;
+                
+                return xml;
+            } catch (error) {
+                console.error('Error creating DOCX document:', error);
+                return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>ERROR: Failed to create DOCX document</w:t></w:r></w:p></w:body></w:document>`;
+            }
+        }
+        
+        function createDocxStyles() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:docDefaults>
+        <w:rPrDefault>
+            <w:rPr>
+                <w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>
+                <w:lang w:val="en-US" w:eastAsia="en-US" w:bidi="ar-SA"/>
+            </w:rPr>
+        </w:rPrDefault>
+    </w:docDefaults>
+    
+    <!-- Heading 1 Style -->
+    <w:style w:type="paragraph" w:styleId="Heading1">
+        <w:name w:val="Heading 1"/>
+        <w:qFormat/>
+        <w:pPr>
+            <w:spacing w:before="240"/>
+            <w:outlineLvl w:val="0"/>
+            <w:ind w:left="0"/>
+            <w:numPr>
+                <w:numId w:val="1"/>
+                <w:ilvl w:val="0"/>
+            </w:numPr>
+        </w:pPr>
+        <w:rPr>
+            <w:b/>
+            <w:sz w:val="32"/>
+            <w:szCs w:val="32"/>
+            <w:color w:val="2563EB"/>
+        </w:rPr>
+    </w:style>
+    
+    <!-- Heading 2 Style -->
+    <w:style w:type="paragraph" w:styleId="Heading2">
+        <w:name w:val="Heading 2"/>
+        <w:qFormat/>
+        <w:pPr>
+            <w:spacing w:before="240"/>
+            <w:outlineLvl w:val="1"/>
+            <w:ind w:left="0"/>
+            <w:numPr>
+                <w:numId w:val="1"/>
+                <w:ilvl w:val="1"/>
+            </w:numPr>
+        </w:pPr>
+        <w:rPr>
+            <w:b/>
+            <w:sz w:val="28"/>
+            <w:szCs w:val="28"/>
+            <w:color w:val="2563EB"/>
+        </w:rPr>
+    </w:style>
+    
+    <!-- Heading 3 Style -->
+    <w:style w:type="paragraph" w:styleId="Heading3">
+        <w:name w:val="Heading 3"/>
+        <w:qFormat/>
+        <w:pPr>
+            <w:spacing w:before="240"/>
+            <w:outlineLvl w:val="2"/>
+            <w:ind w:left="0"/>
+            <w:numPr>
+                <w:numId w:val="1"/>
+                <w:ilvl w:val="2"/>
+            </w:numPr>
+        </w:pPr>
+        <w:rPr>
+            <w:b/>
+            <w:sz w:val="24"/>
+            <w:szCs w:val="24"/>
+            <w:color w:val="2563EB"/>
+        </w:rPr>
+    </w:style>
+    
+    <!-- TOCHeading Style -->
+    <w:style w:type="paragraph" w:styleId="TOCHeading">
+      <w:name w:val="TOC Heading"/>
+      <w:next w:val="Normal"/>
+      <w:uiPriority w:val="39"/>
+      <w:qFormat/>
+      <w:pPr>
+        <w:keepNext/>
+        <w:spacing w:before="240" w:after="240"/>
+        <w:jc w:val="center"/>
+      </w:pPr>
+      <w:rPr>
+        <w:b/>
+        <w:color w:val="2563EB"/>
+        <w:sz w:val="44"/>
+        <w:szCs w:val="44"/>
+      </w:rPr>
+    </w:style>
+</w:styles>`;
+        }
+        
+        function createDocxContentTypes() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+    <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+    <Default Extension="xml" ContentType="application/xml"/>
+    <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+    <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+    <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+    <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+</Types>`;
+        }
+        
+        function createDocxRels() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+        }
+        
+        function createDocxNumbering() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:abstractNum w:abstractNumId="0">
+        <w:nsid w:val="00000001"/>
+        <w:multiLevelType w:val="hybridMultilevel"/>
+        <w:lvl w:ilvl="0" w:tplc="04090001">
+            <w:start w:val="1"/>
+            <w:numFmt w:val="decimal"/>
+            <w:lvlText w:val="%1."/>
+            <w:lvlJc w:val="left"/>
+            <w:pPr>
+                <w:ind w:left="720" w:hanging="360"/>
+            </w:pPr>
+            <w:rPr>
+                <w:rFonts w:hint="default"/>
+            </w:rPr>
+        </w:lvl>
+        <w:lvl w:ilvl="1" w:tplc="04090003">
+            <w:start w:val="1"/>
+            <w:numFmt w:val="decimal"/>
+            <w:lvlText w:val="%1.%2."/>
+            <w:lvlJc w:val="left"/>
+            <w:pPr>
+                <w:ind w:left="1440" w:hanging="360"/>
+            </w:pPr>
+            <w:rPr>
+                <w:rFonts w:hint="default"/>
+            </w:rPr>
+        </w:lvl>
+        <w:lvl w:ilvl="2" w:tplc="04090005">
+            <w:start w:val="1"/>
+            <w:numFmt w:val="decimal"/>
+            <w:lvlText w:val="%1.%2.%3."/>
+            <w:lvlJc w:val="left"/>
+            <w:pPr>
+                <w:ind w:left="2160" w:hanging="360"/>
+            </w:pPr>
+            <w:rPr>
+                <w:rFonts w:hint="default"/>
+            </w:rPr>
+        </w:lvl>
+    </w:abstractNum>
+    <w:num w:numId="1">
+        <w:abstractNumId w:val="0"/>
+    </w:num>
+</w:numbering>`;
+        }
+        
+        function createDocxSettings() {
+            return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+    <w:zoom w:percent="100"/>
+    <w:defaultTabStop w:val="720"/>
+    <w:characterSpacingControl w:val="doNotCompress"/>
+    <w:compat/>
+    <w:rsids>
+        <w:rsidRoot w:val="00000000"/>
+    </w:rsids>
+    <w:themeFontLang w:val="en-US" w:eastAsia="en-US"/>
+    <w:clrSchemeMapping w:bg1="light1" w:t1="dark1" w:bg2="light2" w:t2="dark2" w:accent1="accent1" w:accent2="accent2" w:accent3="accent3" w:accent4="accent4" w:accent5="accent5" w:accent6="accent6" w:hyperlink="hyperlink" w:followedHyperlink="followedHyperlink"/>
+</w:settings>`;
+        }
+        
+        function createDocxDocumentRels() {
+            let rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n`;
+            rels += '    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>';
+            rels += '\n    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>';
+            rels += '\n    <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>';
+            // Add hyperlink relationships
+            if (window._docxHyperlinks) {
+                window._docxHyperlinks.forEach(link => {
+                    rels += `\n    <Relationship Id="${link.relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${link.href}" TargetMode="External"/>`;
+                });
+            }
+            rels += '\n</Relationships>';
+            return rels;
+        }
+        
+        function escapeXml(text) {
+            if (typeof text !== 'string') {
+                console.warn('escapeXml received non-string:', text);
+                text = (text === undefined || text === null) ? '' : String(text);
+            }
+            // Replace &nbsp; and unicode non-breaking space with a regular space
+            text = text.replace(/&nbsp;/g, ' ').replace(/\u00A0/g, ' ');
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+        
+        // Recursive function to handle unlimited subsection levels (all use Heading3 style)
+        function processSubsectionsRecursively(subsections) {
+            let xml = '';
+            subsections.forEach((subsection) => {
+                xml += `
+            <w:p>
+                <w:pPr>
+                    <w:pStyle w:val="Heading3"/>
+                </w:pPr>
+                <w:r>
+                    <w:rPr>
+                        <w:b/>
+                        <w:color w:val="2563EB"/>
+                        <w:sz w:val="24"/>
+                    </w:rPr>
+                    <w:t>${escapeXml(subsection.title)}</w:t>
+                </w:r>
+            </w:p>`;
+                
+                if (subsection.content) {
+                    const subsectionXmlContent = htmlToDocxXml(subsection.content);
+                    if (subsectionXmlContent) {
+                        xml += subsectionXmlContent;
+                    }
+                }
+                
+                // Recursively handle deeper subsections
+                if (subsection.subsections && subsection.subsections.length > 0) {
+                    xml += processSubsectionsRecursively(subsection.subsections);
+                }
+            });
+            return xml;
+        }
+
+        // JSON Export and Import Functions
+        function exportProjectAsJSON(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                alert('Project not found');
+                return;
+            }
+
+            // Create a clean copy of the project for export
+            const exportData = {
+                ...project,
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            downloadFile(blob, `${project.name.replace(/[^a-z0-9]/gi, '_')}.json`);
+        }
+
+        function importProjectFromJSON() {
+            document.getElementById('jsonImportInput').click();
+        }
+
+        function handleJSONImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    // Validate the imported data
+                    if (!importData.name || !importData.sections) {
+                        alert('Invalid project file: Missing required fields (name, sections)');
+                        return;
+                    }
+
+                    // Check if project with same name already exists
+                    const existingProject = projects.find(p => p.name === importData.name);
+                    if (existingProject) {
+                        const newName = prompt(`A project named "${importData.name}" already exists. Please enter a new name:`, `${importData.name}_imported`);
+                        if (!newName || newName.trim() === '') {
+                            return;
+                        }
+                        importData.name = newName.trim();
+                    }
+
+                    // Generate new ID and timestamps for the imported project
+                    const importedProject = {
+                        ...importData,
+                        id: Date.now().toString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        importedAt: new Date().toISOString()
+                    };
+
+                    // Remove export-specific fields
+                    delete importedProject.exportedAt;
+                    delete importedProject.version;
+
+                    // Add to projects array
+                    projects.push(importedProject);
+                    
+                    // Save to localStorage
+                    saveProjects();
+                    
+                    // Refresh the UI
+                    renderProjects();
+                    
+                    // Select the newly imported project
+                    selectProject(importedProject.id);
+                    
+                    alert(`Project "${importedProject.name}" imported successfully!`);
+                    
+                } catch (error) {
+                    console.error('Error importing project:', error);
+                    alert('Error importing project: Invalid JSON file');
+                }
+            };
+            
+            reader.readAsText(file);
+            
+            // Reset the file input
+            event.target.value = '';
+        }
+
+        // Document Info Table Storage Helpers
+        function getDocumentInfo(projectId) {
+            const allInfo = JSON.parse(localStorage.getItem('sysreptor_docinfo') || '{}');
+            return allInfo[projectId] || {
+                title: '',
+                author: '',
+                docOwner: '',
+                procOwner: '',
+                version: '',
+                effDate: '',
+                lastRev: '',
+                nextRev: '',
+                link: ''
+            };
+        }
+        function setDocumentInfo(projectId, info) {
+            const allInfo = JSON.parse(localStorage.getItem('sysreptor_docinfo') || '{}');
+            allInfo[projectId] = info;
+            localStorage.setItem('sysreptor_docinfo', JSON.stringify(allInfo));
+        }
+        function showDocumentInfoModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            const info = getDocumentInfo(currentProject.id);
+            document.getElementById('docInfoTitle').value = info.title || '';
+            document.getElementById('docInfoAuthor').value = info.author || '';
+            document.getElementById('docInfoDocOwner').value = info.docOwner || '';
+            document.getElementById('docInfoProcOwner').value = info.procOwner || '';
+            document.getElementById('docInfoVersion').value = info.version || '';
+            document.getElementById('docInfoEffDate').value = info.effDate || '';
+            document.getElementById('docInfoLastRev').value = info.lastRev || '';
+            document.getElementById('docInfoNextRev').value = info.nextRev || '';
+            document.getElementById('docInfoLink').value = info.link || '';
+            new bootstrap.Modal(document.getElementById('documentInfoModal')).show();
+        }
+        function saveDocumentInfo() {
+            if (!currentProject) return;
+            const info = {
+                title: document.getElementById('docInfoTitle').value,
+                author: document.getElementById('docInfoAuthor').value,
+                docOwner: document.getElementById('docInfoDocOwner').value,
+                procOwner: document.getElementById('docInfoProcOwner').value,
+                version: document.getElementById('docInfoVersion').value,
+                effDate: document.getElementById('docInfoEffDate').value,
+                lastRev: document.getElementById('docInfoLastRev').value,
+                nextRev: document.getElementById('docInfoNextRev').value,
+                link: document.getElementById('docInfoLink').value
+            };
+            setDocumentInfo(currentProject.id, info);
+            bootstrap.Modal.getInstance(document.getElementById('documentInfoModal')).hide();
+        }
+
+        // Helper: Generate Document Info Table (RTF)
+        function generateDocInfoTableRTF(info) {
+            // Table with two columns, blue left column, white right column
+            // RTF color table: 0=auto, 1=dark blue, 2=white
+            let rtf = '{\\colortbl ;\\red0\\green32\\blue96;\\red255\\green255\\blue255;}';
+            // Center the table and make second column 50% wider
+            rtf += '\\trowd\\trgaph108\\trleft-108\\trqc'; // Center alignment
+            const rows = [
+                ['Document Title:', info.title],
+                ['Author:', info.author],
+                ['Document Owner:', info.docOwner],
+                ['Process Owner:', info.procOwner],
+                ['Version No:', info.version],
+                ['Effective Date:', info.effDate],
+                ['Last Reviewed Date:', info.lastRev],
+                ['Next Reviewed Date:', info.nextRev],
+                ['Document Link:', info.link],
+            ];
+            rows.forEach(([label, value]) => {
+                rtf += '\\trowd\\trgaph108\\trleft-108\\trqc';
+                rtf += '\\clcbpat1\\clbrdrb\\brdrs\\brdrw10\\cellx2000'; // Blue left cell (narrower)
+                rtf += '\\clcbpat2\\clbrdrb\\brdrs\\brdrw10\\cellx6000'; // White right cell (50% wider)
+                rtf += `\\intbl\\cf1\\b ${label}\\b0\\cell\\cf0 ${value || ''}\\cell\\row`;
+            });
+            return rtf;
+        }
+        // Helper: Generate Document Info Table (DOCX XML)
+        function generateDocInfoTableDOCX(info) {
+            const rows = [
+                ['Document Title:', info.title],
+                ['Author:', info.author],
+                ['Document Owner:', info.docOwner],
+                ['Process Owner:', info.procOwner],
+                ['Version No:', info.version],
+                ['Effective Date:', info.effDate],
+                ['Last Reviewed Date:', info.lastRev],
+                ['Next Reviewed Date:', info.nextRev],
+                ['Document Link:', info.link],
+            ];
+            let xml = '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:jc w:val="center"/></w:tblPr><w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="4000"/></w:tblGrid>';
+            rows.forEach(([label, value]) => {
+                xml += `
+<w:tr>
+    <w:tc><w:tcPr><w:tcW w:w="2000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="002060"/></w:tcPr><w:p><w:r><w:rPr><w:color w:val="FFFFFF"/><w:b/></w:rPr><w:t>${escapeXml(label)}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p><w:r><w:t>${escapeXml(value || '')}</w:t></w:r></w:p></w:tc>
+</w:tr>`;
+            });
+            xml += '</w:tbl>';
+            return xml;
+        }
+        // Helper: Generate Document Info Table (PDF)
+        function generateDocInfoTablePDF(doc, info, startY) {
+            const rows = [
+                ['Document Title:', info.title],
+                ['Author:', info.author],
+                ['Document Owner:', info.docOwner],
+                ['Process Owner:', info.procOwner],
+                ['Version No:', info.version],
+                ['Effective Date:', info.effDate],
+                ['Last Reviewed Date:', info.lastRev],
+                ['Next Reviewed Date:', info.nextRev],
+                ['Document Link:', info.link],
+            ];
+            let y = startY;
+            doc.setFontSize(10);
+            // Center the table and make second column 50% wider
+            const tableWidth = 150; // Total table width
+            const leftColWidth = 50; // Left column width
+            const rightColWidth = 100; // Right column width (50% wider)
+            const startX = (210 - tableWidth) / 2; // Center the table (210mm page width)
+            
+            rows.forEach(([label, value]) => {
+                doc.setFillColor(0, 32, 96); // Blue
+                doc.setTextColor(255,255,255);
+                doc.rect(startX, y, leftColWidth, 7, 'F');
+                doc.text(label, startX + 2, y + 5);
+                doc.setFillColor(255,255,255);
+                doc.setTextColor(0,0,0);
+                doc.rect(startX + leftColWidth, y, rightColWidth, 7, 'F');
+                doc.text(value || '', startX + leftColWidth + 2, y + 5);
+                y += 8;
+            });
+            return y;
+        }
+
+        // Restore generateTOC function for TOC preview and exports
+        function generateTOC() {
+            if (!currentProject || !currentProject.sections) return [];
+            const toc = [];
+            function walk(node, numberParts, level, path) {
+                toc.push({
+                    level: level,
+                    number: numberParts.join('.'),
+                    title: node.title,
+                    page: '', // Page calculation can be added later
+                    path: path.join('-')
+                });
+                if (node.subsections && node.subsections.length > 0) {
+                    node.subsections.forEach((sub, idx) => {
+                        walk(sub, numberParts.concat(idx + 1), level + 1, path.concat(idx));
+                    });
+                }
+            }
+            currentProject.sections.forEach((section, idx) => {
+                walk(section, [idx + 1], 1, [idx]);
+            });
+            return toc;
+        }
+
+        // Add a simple calculatePageNumbers function for TOC preview
+        function calculatePageNumbers() {
+            // For now, just return an array of empty strings or dummy page numbers
+            const toc = generateTOC();
+            return toc.map((_, i) => ''); // or use (i+1).toString() for dummy page numbers
+        }
+
+        // --- HTML to formatted text for PDF ---
+        function htmlToPdfRuns(node, parentStyle = {}) {
+            // Returns an array of {runs: [{text, bold, italic, underline, fontSize, fontFamily, isLink, href}], isList, isNumbered, listIndex, align}
+            let blocks = [];
+            function walk(node, style, runs) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    if (node.textContent) {
+                        runs.push({
+                            text: node.textContent,
+                            ...style
+                        });
+                    }
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    let s = {...style};
+                    const tag = node.tagName.toLowerCase();
+                    if (tag === 'b' || tag === 'strong') s.bold = true;
+                    if (tag === 'i' || tag === 'em') s.italic = true;
+                    if (tag === 'u') s.underline = true;
+                    if (tag === 'a') {
+                        s.isLink = true;
+                        s.href = node.getAttribute('href');
+                    }
+                    // Inline style
+                    const fontSize = node.style.fontSize;
+                    if (fontSize && fontSize.endsWith('pt')) s.fontSize = parseFloat(fontSize);
+                    const fontFamily = node.style.fontFamily;
+                    if (fontFamily) s.fontFamily = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+                    // Recurse
+                    for (let child of node.childNodes) {
+                        walk(child, s, runs);
+                    }
+                }
+            }
+            // Parse block-level elements
+            const parseBlock = (el, listContext = null) => {
+                const tag = el.tagName ? el.tagName.toLowerCase() : '';
+                let align = el.style && el.style.textAlign ? el.style.textAlign : undefined;
+                if (tag === 'ul' || tag === 'ol') {
+                    let isNumbered = tag === 'ol';
+                    let idx = 1;
+                    for (let li of el.children) {
+                        if (li.tagName && li.tagName.toLowerCase() === 'li') {
+                            let runs = [];
+                            for (let child of li.childNodes) walk(child, {}, runs);
+                            blocks.push({
+                                runs,
+                                isList: true,
+                                isNumbered,
+                                listIndex: idx,
+                                align
+                            });
+                            idx++;
+                        }
+                    }
+                } else if (tag === 'p' || tag === 'div' || tag === 'li') {
+                    let runs = [];
+                    for (let child of el.childNodes) walk(child, {}, runs);
+                    blocks.push({
+                        runs,
+                        isList: listContext ? true : false,
+                        isNumbered: listContext === 'ol',
+                        listIndex: listContext ? listContext.idx : undefined,
+                        align
+                    });
+                } else {
+                    // Inline or unknown block, treat as paragraph
+                    let runs = [];
+                    for (let child of el.childNodes) walk(child, {}, runs);
+                    if (runs.length) blocks.push({runs, align});
+                }
+            };
+            // Use DOMParser to parse HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div>${node}</div>`, 'text/html');
+            for (let el of doc.body.firstChild.childNodes) {
+                if (el.nodeType === Node.ELEMENT_NODE) {
+                    const tag = el.tagName.toLowerCase();
+                    if (tag === 'ul' || tag === 'ol') {
+                        parseBlock(el);
+                    } else {
+                        parseBlock(el);
+                    }
+                } else if (el.nodeType === Node.TEXT_NODE && el.textContent.trim()) {
+                    blocks.push({runs: [{text: el.textContent}]});
+                }
+            }
+            return blocks;
+        }
+
+        // --- HTML to DOCX XML converter ---
+        function htmlToDocxXml(html) {
+            if (!html) return '';
+            // Split by block elements (p, br, li)
+            html = html.replace(/<br\s*\/?>/gi, '</br>');
+            // Handle paragraphs and list items
+            html = html.replace(/<p/gi, '|||<p');
+            html = html.replace(/<li/gi, '|||<li');
+            html = html.replace(/<\/p>/gi, '</p>|||');
+            html = html.replace(/<\/li>/gi, '</li>|||');
+            html = html.replace(/<ul>/gi, '');
+            html = html.replace(/<\/ul>/gi, '');
+            html = html.replace(/<ol>/gi, '');
+            html = html.replace(/<\/ol>/gi, '');
+            html = html.replace(/<br\s*\/?>/gi, '</br>|||');
+            const blocks = html.split('|||').map(s => s.trim()).filter(Boolean);
+            let xml = '';
+            let hyperlinks = [];
+            blocks.forEach(block => {
+                // List item
+                if (block.startsWith('<li')) {
+                    let text = block.replace(/<li[^>]*>/gi, '').replace(/<\/li>/gi, '');
+                    xml += `<w:p><w:r><w:t>\u2022 </w:t></w:r>${htmlInlineToDocx(text, hyperlinks)}</w:p>`;
+                } else if (block.startsWith('<p')) {
+                    // Detect alignment
+                    let align = '';
+                    const alignMatch = block.match(/text-align\s*:\s*(center|right|left)/i);
+                    if (alignMatch) {
+                        align = alignMatch[1].toLowerCase();
+                    }
+                    // Detect font size and family
+                    let fontSize = '';
+                    let fontFamily = '';
+                    const fontSizeMatch = block.match(/font-size\s*:\s*([0-9.]+)pt/i);
+                    if (fontSizeMatch) fontSize = fontSizeMatch[1];
+                    const fontFamilyMatch = block.match(/font-family\s*:\s*([^;"']+)/i);
+                    if (fontFamilyMatch) fontFamily = fontFamilyMatch[1];
+                    let text = block.replace(/<p[^>]*>/gi, '').replace(/<\/p>/gi, '');
+                    xml += `<w:p>`;
+                    if (align || fontSize || fontFamily) {
+                        xml += `<w:pPr>`;
+                        if (align) xml += `<w:jc w:val=\"${align}\"/>`;
+                        xml += `</w:pPr>`;
+                    }
+                    xml += htmlInlineToDocx(text, hyperlinks, fontSize, fontFamily) + `</w:p>`;
+                } else if (block.startsWith('</br>')) {
+                    xml += `<w:p></w:p>`;
+                } else if (block) {
+                    xml += `<w:p>${htmlInlineToDocx(block, hyperlinks)}</w:p>`;
+                }
+            });
+            // Store hyperlinks for rels
+            if (!window._docxHyperlinks) window._docxHyperlinks = [];
+            window._docxHyperlinks.push(...hyperlinks);
+            return xml;
+        }
+        // Inline formatting: bold, italic, underline, links, font size, font family
+        function htmlInlineToDocx(html, hyperlinks, parentFontSize, parentFontFamily) {
+            if (!html) return '';
+            // Split by tags to handle nested formatting
+            let runs = [];
+            let tagStack = [];
+            let buffer = '';
+            let i = 0;
+            while (i < html.length) {
+                if (html[i] === '<') {
+                    // Flush buffer
+                    if (buffer) {
+                        runs.push({text: buffer, tags: [...tagStack]});
+                        buffer = '';
+                    }
+                    // Find tag
+                    const closeIdx = html.indexOf('>', i);
+                    if (closeIdx === -1) break;
+                    const tag = html.substring(i, closeIdx + 1);
+                    const tagName = tag.match(/<\/?([a-zA-Z]+)/)?.[1]?.toLowerCase();
+                    const isClose = tag.startsWith('</');
+                    if (['b','strong','i','em','u'].includes(tagName)) {
+                        if (isClose) {
+                            tagStack.pop();
+                        } else {
+                            tagStack.push(tagName);
+                        }
+                    }
+                    // Font size and family
+                    else if (tagName === 'span') {
+                        if (isClose) {
+                            tagStack.pop();
+                        } else {
+                            // Extract style
+                            const fontSizeMatch = tag.match(/font-size:\s*([0-9.]+)pt/i);
+                            const fontFamilyMatch = tag.match(/font-family:\s*([^;"']+)/i);
+                            tagStack.push({type:'span', fontSize: fontSizeMatch ? fontSizeMatch[1] : undefined, fontFamily: fontFamilyMatch ? fontFamilyMatch[1] : undefined});
+                        }
+                    }
+                    // Links
+                    else if (tagName === 'a') {
+                        if (isClose) {
+                            tagStack.pop();
+                        } else {
+                            // Extract href
+                            const hrefMatch = tag.match(/href=["']([^"']+)["']/i);
+                            const href = hrefMatch ? hrefMatch[1] : '';
+                            const relId = `rId${(hyperlinks.length + 1)}`;
+                            tagStack.push({type:'a', href, relId});
+                            hyperlinks.push({href, relId});
+                        }
+                    }
+                    i = closeIdx + 1;
+                } else {
+                    buffer += html[i];
+                    i++;
+                }
+            }
+            if (buffer) {
+                runs.push({text: buffer, tags: [...tagStack]});
+            }
+            // Convert runs to DOCX XML
+            let xml = '';
+            runs.forEach(run => {
+                let rPr = '';
+                let text = run.text;
+                if (!text) return;
+                if (run.tags.includes('b') || run.tags.includes('strong')) rPr += '<w:b/>';
+                if (run.tags.includes('i') || run.tags.includes('em')) rPr += '<w:i/>';
+                if (run.tags.includes('u')) rPr += '<w:u w:val="single"/>';
+                // Font size and family
+                let fontSize = parentFontSize;
+                let fontFamily = parentFontFamily;
+                const spanTag = run.tags.find(t => typeof t === 'object' && t.type === 'span');
+                if (spanTag) {
+                    if (spanTag.fontSize) fontSize = spanTag.fontSize;
+                    if (spanTag.fontFamily) fontFamily = spanTag.fontFamily;
+                }
+                if (fontSize) rPr += `<w:sz w:val="${Math.round(parseFloat(fontSize)*2)}"/>`;
+                if (fontFamily) rPr += `<w:rFonts w:ascii="${fontFamily}" w:hAnsi="${fontFamily}"/>`;
+                // Ensure body text is black (not blue like headers)
+                rPr += '<w:color w:val="000000"/>';
+                // Links
+                const linkTag = run.tags.find(t => typeof t === 'object' && t.type === 'a');
+                if (linkTag) {
+                    // Render as hyperlink
+                    xml += `<w:hyperlink r:id="${linkTag.relId}" w:history="1"><w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ''}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:hyperlink>`;
+                } else {
+                    // Always use xml:space="preserve" to preserve spaces (including non-breaking)
+                    xml += `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ''}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+                }
+            });
+            return xml;
+        }
+
+        function renderChangelogTable() {
+            const projectId = currentProject?.id;
+            let data = [];
+            if (projectId && customChangelog[projectId]) {
+                try {
+                    data = JSON.parse(customChangelog[projectId]);
+                } catch { data = []; }
+            }
+            const tbody = document.getElementById('changelogTableBody');
+            tbody.innerHTML = '';
+            if (!data.length) data = [{version:'', date:'', author:'', reviewer:'', approver:'', desc:''}];
+            data.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="text" class="form-control form-control-sm" value="${row.version||''}" onchange="updateChangelogCell(${idx},'version',this.value)"></td>
+                    <td><input type="date" class="form-control form-control-sm" value="${row.date||''}" onchange="updateChangelogCell(${idx},'date',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${row.author||''}" onchange="updateChangelogCell(${idx},'author',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${row.reviewer||''}" onchange="updateChangelogCell(${idx},'reviewer',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${row.approver||''}" onchange="updateChangelogCell(${idx},'approver',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${row.desc||''}" onchange="updateChangelogCell(${idx},'desc',this.value)"></td>
+                    <td><button class="btn btn-sm btn-danger" onclick="removeChangelogRow(${idx})"><i class="fas fa-trash"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        function addChangelogRow() {
+            const projectId = currentProject?.id;
+            let data = [];
+            if (projectId && customChangelog[projectId]) {
+                try { data = JSON.parse(customChangelog[projectId]); } catch { data = []; }
+            }
+            data.push({version:'', date:'', author:'', reviewer:'', approver:'', desc:''});
+            customChangelog[projectId] = JSON.stringify(data);
+            // Save to localStorage immediately
+            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            renderChangelogTable();
+        }
+        function removeChangelogRow(idx) {
+            const projectId = currentProject?.id;
+            let data = [];
+            if (projectId && customChangelog[projectId]) {
+                try { data = JSON.parse(customChangelog[projectId]); } catch { data = []; }
+            }
+            data.splice(idx, 1);
+            customChangelog[projectId] = JSON.stringify(data);
+            // Save to localStorage immediately
+            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            renderChangelogTable();
+        }
+        function updateChangelogCell(idx, key, value) {
+            const projectId = currentProject?.id;
+            let data = [];
+            if (projectId && customChangelog[projectId]) {
+                try { data = JSON.parse(customChangelog[projectId]); } catch { data = []; }
+            }
+            if (!data[idx]) data[idx] = {version:'', date:'', author:'', reviewer:'', approver:'', desc:''};
+            data[idx][key] = value;
+            customChangelog[projectId] = JSON.stringify(data);
+            // Save to localStorage immediately
+            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+        }
+        function saveCustomChangelogTable() {
+            // Ensure data is saved to localStorage
+            if (currentProject) {
+                localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            }
+            bootstrap.Modal.getInstance(document.getElementById('customChangelogModal')).hide();
+            alert('Custom changelog saved successfully!');
+        }
+        function showCustomChangelogModal() {
+            renderChangelogTable();
+            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+        }
+    </script>
+</body>
+</html> 
