@@ -54,7 +54,7 @@
         }
 
         .top-bar {
-            background: white;
+            background: rgb(255, 255, 255);
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             position: sticky;
@@ -108,7 +108,7 @@
         }
 
         .tinymce-editor {
-            min-height: 200px;
+            min-height: 300px;
             font-size: 14px;
         }
 
@@ -661,10 +661,10 @@
     <script>
         // Global state
         let currentProject = null;
-        let projects = JSON.parse(localStorage.getItem('sysreptor_projects') || '[]');
-        let customFields = JSON.parse(localStorage.getItem('sysreptor_fields') || '[]');
-        let versionHistory = JSON.parse(localStorage.getItem('sysreptor_versions') || '[]');
-        let customChangelog = JSON.parse(localStorage.getItem('sysreptor_custom_changelog') || '{}');
+        let projects = JSON.parse(localStorage.getItem('bytedraft_projects') || '[]');
+        let customFields = JSON.parse(localStorage.getItem('bytedraft_fields') || '[]');
+        let versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+        let customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
 
         // Templates will be loaded from templates.json
         let templates = {};
@@ -1193,7 +1193,7 @@
                 saveProject();
                 const zip = new JSZip();
                 // Get header/footer content from localStorage
-                const headerFooter = JSON.parse(localStorage.getItem('sysreptor_headerfooter') || '{}');
+                const headerFooter = JSON.parse(localStorage.getItem('bytedraft_headerfooter') || '{}');
                 const projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
                 // Create the document structure with dependencies
                 const documentXml = createDocxDocument(
@@ -1564,22 +1564,22 @@
 
         // Storage Functions
         function saveProjects() {
-            localStorage.setItem('sysreptor_projects', JSON.stringify(projects));
+            localStorage.setItem('bytedraft_projects', JSON.stringify(projects));
         }
 
         function saveCustomFields() {
-            localStorage.setItem('sysreptor_fields', JSON.stringify(customFields));
+            localStorage.setItem('bytedraft_fields', JSON.stringify(customFields));
         }
 
         function saveVersionHistory() {
-            localStorage.setItem('sysreptor_versions', JSON.stringify(versionHistory));
+            localStorage.setItem('bytedraft_versions', JSON.stringify(versionHistory));
         }
 
         function saveCustomChangelog() {
             // This function is kept for backward compatibility but now uses the table data
             if (currentProject) {
                 // The data is already saved in updateChangelogCell, just ensure it's persisted
-                localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+                localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
             }
         }
 
@@ -1821,7 +1821,7 @@
                 return;
             }
             // Load from localStorage or project
-            let headerFooter = JSON.parse(localStorage.getItem('sysreptor_header_footer') || '{}');
+            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
             let projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
             document.getElementById('headerContent').value = projectHeaderFooter.header || '';
             document.getElementById('footerContent').value = projectHeaderFooter.footer || '';
@@ -1830,12 +1830,12 @@
         }
         function saveHeaderFooter() {
             if (!currentProject) return;
-            let headerFooter = JSON.parse(localStorage.getItem('sysreptor_header_footer') || '{}');
+            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
             headerFooter[currentProject.id] = {
                 header: document.getElementById('headerContent').value,
                 footer: document.getElementById('footerContent').value
             };
-            localStorage.setItem('sysreptor_header_footer', JSON.stringify(headerFooter));
+            localStorage.setItem('bytedraft_header_footer', JSON.stringify(headerFooter));
             bootstrap.Modal.getInstance(document.getElementById('headerFooterModal')).hide();
         }
 
@@ -2262,7 +2262,7 @@
 
         // Document Info Table Storage Helpers
         function getDocumentInfo(projectId) {
-            const allInfo = JSON.parse(localStorage.getItem('sysreptor_docinfo') || '{}');
+            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
             return allInfo[projectId] || {
                 title: '',
                 author: '',
@@ -2276,9 +2276,9 @@
             };
         }
         function setDocumentInfo(projectId, info) {
-            const allInfo = JSON.parse(localStorage.getItem('sysreptor_docinfo') || '{}');
+            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
             allInfo[projectId] = info;
-            localStorage.setItem('sysreptor_docinfo', JSON.stringify(allInfo));
+            localStorage.setItem('bytedraft_docinfo', JSON.stringify(allInfo));
         }
         function showDocumentInfoModal() {
             if (!currentProject) {
@@ -2704,7 +2704,7 @@
             data.push({version:'', date:'', author:'', reviewer:'', approver:'', desc:''});
             customChangelog[projectId] = JSON.stringify(data);
             // Save to localStorage immediately
-            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
             renderChangelogTable();
         }
         function removeChangelogRow(idx) {
@@ -2716,7 +2716,7 @@
             data.splice(idx, 1);
             customChangelog[projectId] = JSON.stringify(data);
             // Save to localStorage immediately
-            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
             renderChangelogTable();
         }
         function updateChangelogCell(idx, key, value) {
@@ -2729,12 +2729,12 @@
             data[idx][key] = value;
             customChangelog[projectId] = JSON.stringify(data);
             // Save to localStorage immediately
-            localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+            localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
         }
         function saveCustomChangelogTable() {
             // Ensure data is saved to localStorage
             if (currentProject) {
-                localStorage.setItem('sysreptor_custom_changelog', JSON.stringify(customChangelog));
+                localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
             }
             bootstrap.Modal.getInstance(document.getElementById('customChangelogModal')).hide();
             alert('Custom changelog saved successfully!');
