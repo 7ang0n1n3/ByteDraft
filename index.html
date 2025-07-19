@@ -6,19 +6,23 @@
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
-    <link href="libs/bootstrap.min.css" rel="stylesheet">
+    <link href="libs/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="libs/github-dark.min.css">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="all.min.css">
+    <link rel="stylesheet" href="libs/fonts/css/all.min.css">
     <!-- JSZip for creating files -->
     <script src="libs/jszip.min.js"></script>
     <!-- Add TinyMCE -->
-    <script src="libs/tinymce/js/tinymce/tinymce.min.js"></script>
+    <script src="libs/tinymce/tinymce.min.js"></script>
     <!-- Templates script -->
     <script src="templates.js"></script>
     <!-- DOCX Export Module (classic script) -->
     <script src="docxExport.js"></script>
+    <!-- Modern DOCX Library -->
+    <script src="libs/docx/index.umd.js"></script>
+    <!-- Modern DOCX Export Module -->
+    <script src="modernDocxExport.js"></script>
     
     <style>
         :root {
@@ -28,42 +32,64 @@
             --danger-color: #dc2626;
             --warning-color: #d97706;
             --info-color: #0891b2;
-            --light-bg: #f8fafc;
-            --dark-bg: #1e293b;
+            --background-color: #ffffff;
+            --surface-color: #f8fafc;
+            --text-color: #212529;
             --border-color: #e2e8f0;
+            --sidebar-bg: #ffffff;
+            --editor-bg: #ffffff;
+            --toc-hover: #e9ecef;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #0d6efd;
+            --secondary-color: #adb5bd;
+            --background-color: #212529;
+            --surface-color: #343a40;
+            --text-color: #f8f9fa;
+            --border-color: #495057;
+            --sidebar-bg: #343a40;
+            --editor-bg: #2b3035;
+            --toc-hover: #495057;
         }
 
         body {
-            background: var(--light-bg);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         .sidebar {
-            background: white;
+            background-color: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             height: 100vh;
             position: fixed;
             width: 280px;
             overflow-y: auto;
             z-index: 1000;
+            transition: background-color 0.3s ease;
         }
 
         .main-content {
             margin-left: 280px;
             min-height: 100vh;
+            background-color: var(--background-color);
+            transition: background-color 0.3s ease;
         }
 
         .top-bar {
-            background: rgb(255, 255, 255);
+            background-color: var(--surface-color);
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             position: sticky;
             top: 0;
             z-index: 100;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .project-card {
-            background: white;
+            background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1rem;
@@ -79,11 +105,11 @@
 
         .project-card.active {
             border-color: var(--primary-color);
-            background: #eff6ff;
+            background: var(--toc-hover);
         }
 
         .section-item {
-            background: white;
+            background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-bottom: 1rem;
@@ -95,7 +121,7 @@
         }
 
         .section-header {
-            background: #f8fafc;
+            background-color: var(--background-color);
             padding: 1rem;
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -133,7 +159,7 @@
         }
 
         .custom-fields-panel {
-            background: white;
+            background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1rem;
@@ -148,7 +174,7 @@
         }
 
         .template-card {
-            background: white;
+            background-color: var(--surface-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1.5rem;
@@ -211,7 +237,8 @@
             padding: 0.25rem 0.5rem;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            background: white;
+            background-color: var(--surface-color);
+            color: var(--text-color);
         }
 
         .drag-handle {
@@ -248,11 +275,11 @@
         }
 
         .version-item:hover {
-            background: #f8fafc;
+            background: var(--toc-hover);
         }
 
         .version-item.active {
-            background: #eff6ff;
+            background: var(--toc-hover);
             border-left: 3px solid var(--primary-color);
         }
 
@@ -272,7 +299,7 @@
         }
 
         .toc-item:hover {
-            background-color: #f8f9fa;
+            background-color: var(--toc-hover);
         }
 
         .toc-item.level-1 {
@@ -301,6 +328,465 @@
             .main-content {
                 margin-left: 0;
             }
+        }
+
+        /* Dark theme specific overrides */
+        [data-theme="dark"] .version-item:hover {
+            background-color: var(--toc-hover);
+        }
+
+        [data-theme="dark"] .version-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        [data-theme="dark"] .toc-item {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .toc-item:hover {
+            background-color: var(--toc-hover);
+        }
+
+        [data-theme="dark"] .toc-item.level-1 {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .toc-item.level-2 {
+            color: #d1d5db;
+        }
+
+        [data-theme="dark"] .toc-item.level-3 {
+            color: #9ca3af;
+        }
+
+        /* Project card text colors for dark theme */
+        [data-theme="dark"] .project-card h6 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .project-card small {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .project-card .text-muted {
+            color: #9ca3af !important;
+        }
+
+        /* Template card text colors for dark theme */
+        [data-theme="dark"] .template-card h6 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .template-card small {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .template-card .text-muted {
+            color: #9ca3af !important;
+        }
+
+        /* Sidebar text colors for dark theme */
+        [data-theme="dark"] .sidebar h5,
+        [data-theme="dark"] .sidebar h6 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .sidebar .text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .sidebar small {
+            color: #9ca3af !important;
+        }
+
+        /* Main content text colors for dark theme */
+        [data-theme="dark"] .main-content h4,
+        [data-theme="dark"] .main-content h5,
+        [data-theme="dark"] .main-content h6 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .main-content .text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .main-content p {
+            color: var(--text-color) !important;
+        }
+
+        /* Top bar text colors for dark theme */
+        [data-theme="dark"] .top-bar h4 {
+            color: var(--text-color) !important;
+        }
+
+        /* Form elements for dark theme */
+        [data-theme="dark"] .form-control {
+            background-color: var(--surface-color) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .form-select {
+            background-color: var(--surface-color) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: var(--surface-color) !important;
+            border-color: var(--primary-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Button text colors for dark theme */
+        [data-theme="dark"] .btn-outline-secondary {
+            color: var(--text-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            background-color: var(--toc-hover) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Status badges for dark theme */
+        [data-theme="dark"] .status-draft {
+            background: #451a03 !important;
+            color: #fbbf24 !important;
+        }
+
+        [data-theme="dark"] .status-working {
+            background: #1e3a8a !important;
+            color: #93c5fd !important;
+        }
+
+        [data-theme="dark"] .status-publish {
+            background: #064e3b !important;
+            color: #6ee7b7 !important;
+        }
+
+        /* TinyMCE dark theme support */
+        [data-theme="dark"] .tox-tinymce {
+            background-color: var(--editor-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-toolbar {
+            background-color: var(--surface-color) !important;
+            border-bottom: 1px solid var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-edit-area {
+            background-color: var(--editor-bg) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-edit-area__iframe {
+            background-color: var(--editor-bg) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-toolbar__group {
+            background-color: var(--surface-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-tbtn {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-tbtn:hover {
+            background-color: var(--toc-hover) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-statusbar {
+            background-color: var(--surface-color) !important;
+            color: var(--text-color) !important;
+            border-top: 1px solid var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-statusbar__path {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-statusbar__wordcount {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-menu {
+            background-color: var(--surface-color) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-collection__item {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .tox .tox-collection__item:hover {
+            background-color: var(--toc-hover) !important;
+        }
+
+        /* Custom scrollbar for dark theme */
+        [data-theme="dark"] ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--surface-color);
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+
+        /* Animation for theme toggle */
+        .theme-toggle-animation {
+            transition: transform 0.3s ease;
+        }
+
+        .theme-toggle-animation:hover {
+            transform: rotate(180deg);
+        }
+
+        /* Additional Bootstrap overrides for dark theme */
+        [data-theme="dark"] .text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .text-secondary {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .badge {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .badge.bg-secondary {
+            background-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        /* Modal overrides for dark theme */
+        [data-theme="dark"] .modal-content {
+            background-color: var(--surface-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .modal-title {
+            color: var(--text-color) !important;
+        }
+
+        /* Dropdown overrides for dark theme */
+        [data-theme="dark"] .dropdown-menu {
+            background-color: var(--surface-color) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        [data-theme="dark"] .dropdown-item {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .dropdown-item:hover {
+            background-color: var(--toc-hover) !important;
+        }
+
+        [data-theme="dark"] .dropdown-divider {
+            border-color: var(--border-color) !important;
+        }
+
+        /* Table overrides for dark theme */
+        [data-theme="dark"] .table {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table th {
+            background-color: var(--surface-color) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table td {
+            border-color: var(--border-color) !important;
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .table-primary {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        [data-theme="dark"] .table-primary th {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        /* Additional text color fixes */
+        [data-theme="dark"] .text-center {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .text-center.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .text-center h5.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .text-center p.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .text-center i.text-muted {
+            color: #9ca3af !important;
+        }
+
+        /* Strong and bold text in dark mode */
+        [data-theme="dark"] strong {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] b {
+            color: var(--text-color) !important;
+        }
+
+        /* Additional button overrides */
+        [data-theme="dark"] .btn-outline-primary {
+            color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+        }
+
+        [data-theme="dark"] .btn-outline-primary:hover {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        [data-theme="dark"] .btn-outline-danger {
+            color: var(--danger-color) !important;
+            border-color: var(--danger-color) !important;
+        }
+
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background-color: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        [data-theme="dark"] .btn-outline-warning {
+            color: var(--warning-color) !important;
+            border-color: var(--warning-color) !important;
+        }
+
+        [data-theme="dark"] .btn-outline-warning:hover {
+            background-color: var(--warning-color) !important;
+            color: white !important;
+        }
+
+        [data-theme="dark"] .btn-outline-info {
+            color: var(--info-color) !important;
+            border-color: var(--info-color) !important;
+        }
+
+        [data-theme="dark"] .btn-outline-info:hover {
+            background-color: var(--info-color) !important;
+            color: white !important;
+        }
+
+        /* Label overrides for dark mode */
+        [data-theme="dark"] .form-label {
+            color: var(--text-color) !important;
+        }
+
+        /* Placeholder text for dark mode */
+        [data-theme="dark"] ::placeholder {
+            color: #9ca3af !important;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] ::-webkit-input-placeholder {
+            color: #9ca3af !important;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] ::-moz-placeholder {
+            color: #9ca3af !important;
+            opacity: 1;
+        }
+
+        [data-theme="dark"] :-ms-input-placeholder {
+            color: #9ca3af !important;
+            opacity: 1;
+        }
+
+        /* Additional comprehensive text color fixes */
+        [data-theme="dark"] .ms-2 {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .mb-0 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .mb-0.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .mb-1 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .mb-2 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .mb-3 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .mb-3.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .py-3 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .py-3.text-muted {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .py-5 {
+            color: var(--text-color) !important;
+        }
+
+        [data-theme="dark"] .fa-3x {
+            color: #9ca3af !important;
+        }
+
+        [data-theme="dark"] .fa-2x {
+            color: #9ca3af !important;
+        }
+
+        /* Ensure all text elements in dark mode are properly colored */
+        [data-theme="dark"] * {
+            color: inherit;
+        }
+
+        [data-theme="dark"] .text-muted,
+        [data-theme="dark"] .text-secondary,
+        [data-theme="dark"] small.text-muted {
+            color: #9ca3af !important;
         }
     </style>
 </head>
@@ -390,7 +876,7 @@
                         <i class="fas fa-table me-1"></i>Edit Document Info
                     </button>
                     <button class="btn btn-outline-warning" onclick="showCustomChangelogModal()">
-                        <i class="fas fa-edit me-1"></i>Document Changelog
+                        <i class="fas fa-edit me-1"></i>Document Change Log
                     </button>
                     <div class="dropdown">
                         <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
@@ -400,11 +886,12 @@
                             <li><a class="dropdown-item" href="#" onclick="exportDocument('docx')" title="Export as .docx file (Modern Word format)">
                                 <i class="fas fa-file-word me-2"></i>Word (.docx)
                             </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="exportDocument('pdf')">
-                                <i class="fas fa-file-pdf me-2"></i>PDF
-                            </a></li>
+                            
                         </ul>
                     </div>
+                    <button class="btn btn-outline-secondary theme-toggle-animation" id="themeToggle" title="Toggle Dark/Light Mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -524,13 +1011,13 @@
                 <div class="modal-body">
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle" id="changelogTable">
-                            <thead class="table-primary text-white" style="background-color: #001a70;">
+                            <thead class="table-primary text-white">
                                 <tr>
                                     <th>Version Number</th>
                                     <th>Approved Date</th>
                                     <th>Author</th>
                                     <th>Reviewer</th>
-                                    <th>Approver for Change</th>
+                                    <th>Approver</th>
                                     <th>Description</th>
                                     <th style="width: 40px;"></th>
                                 </tr>
@@ -653,9 +1140,9 @@
     </div>
 
     <!-- Scripts -->
-    <script src="libs/bootstrap.bundle.min.js"></script>
+    <script src="libs/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="libs/highlight.min.js"></script>
-    <script src="libs/jspdf.umd.min.js"></script>
+
     <script src="libs/html2canvas.min.js"></script>
 
     <script>
@@ -735,6 +1222,12 @@
             renderProjectContent();
             // Update TOC when project is selected
             setTimeout(() => updateTOCPreview(), 200);
+            // Ensure theme is properly applied to new editors
+            setTimeout(() => {
+                if (window.tinymce) {
+                    forceThemeRefresh();
+                }
+            }, 300);
         }
 
         function renderProjects() {
@@ -874,14 +1367,116 @@
             `;
             parentContainer.appendChild(nodeDiv);
             // Initialize TinyMCE
+            const isDarkTheme = currentTheme === 'dark';
+            console.log('Initializing editor with theme:', currentTheme, 'isDark:', isDarkTheme);
             tinymce.init({
                 selector: `#editor-${path.join('-')}`,
-                menubar: false,
-                plugins: 'lists link image code table advlist fontfamily fontsize',
-                toolbar: 'undo redo | formatselect fontfamily fontsize | bold italic underline | alignleft aligncenter alignright | bullist numlist outdent indent | link image | code',
-                height: 200,
-                font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt',
+                height: 300,
+                license_key: 'gpl',
+                skin: isDarkTheme ? 'oxide-dark' : 'oxide',
+                content_css: isDarkTheme ? 'dark' : 'default',
+                menubar: 'file edit view insert format tools table help',
+                plugins: [
+                    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                    'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                    'insertdatetime', 'media', 'table', 'help', 'wordcount', 'save',
+                    'fontfamily', 'fontsize', 'textcolor', 'backcolor', 'emoticons'
+                ],
+                toolbar: [
+                    'undo redo | formatselect fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help'
+                ].join(' | '),
+                font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
                 font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
+                content_style: `
+                    body { 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                        background-color: ${isDarkTheme ? '#2b3035' : '#ffffff'};
+                    }
+                    h1, h2, h3, h4, h5, h6 { 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                        margin-top: 1.5em;
+                        margin-bottom: 0.5em;
+                    }
+                    p { 
+                        margin-bottom: 1em; 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    li {
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { 
+                        border: 1px solid ${isDarkTheme ? '#495057' : '#dee2e6'}; 
+                        padding: 8px; 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    th { 
+                        background-color: ${isDarkTheme ? '#343a40' : '#f8f9fa'}; 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    code { 
+                        background-color: ${isDarkTheme ? '#343a40' : '#f8f9fa'}; 
+                        padding: 2px 4px; 
+                        border-radius: 3px; 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    pre { 
+                        background-color: ${isDarkTheme ? '#343a40' : '#f8f9fa'}; 
+                        padding: 1em; 
+                        border-radius: 4px; 
+                        overflow-x: auto; 
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    a {
+                        color: ${isDarkTheme ? '#0d6efd' : '#0d6efd'};
+                    }
+                    strong, b {
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                    em, i {
+                        color: ${isDarkTheme ? '#ffffff' : '#212529'};
+                    }
+                `,
+                // Image configuration for local storage
+                images_upload_handler: (blobInfo, progress, failure) => {
+                    return new Promise((resolve, reject) => {
+                        // Convert image to base64 for local storage
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            resolve(reader.result);
+                        };
+                        reader.onerror = () => {
+                            reject('Image upload failed');
+                        };
+                        reader.readAsDataURL(blobInfo.blob());
+                    });
+                },
+                // Enable file picker for images
+                file_picker_types: 'image',
+                file_picker_callback: (callback, value, meta) => {
+                    if (meta.filetype === 'image') {
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'file');
+                        input.setAttribute('accept', 'image/*');
+                        
+                        input.onchange = () => {
+                            const file = input.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    callback(reader.result, { title: file.name });
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        };
+                        
+                        input.click();
+                    }
+                },
                 setup: function(editor) {
                     editor.on('init', function() {
                         editor.setContent(node.content || '');
@@ -1180,334 +1775,31 @@
                 case 'docx':
                     await exportToDocx();
                     break;
-                case 'pdf':
-                    await exportToPDF();
-                    break;
+
             }
         }
 
         async function exportToDocx() {
             try {
-                console.log('Starting DOCX export...');
+                console.log('Starting modern DOCX export...');
                 updateAllSectionContents();
                 saveProject();
-                const zip = new JSZip();
-                // Get header/footer content from localStorage
-                const headerFooter = JSON.parse(localStorage.getItem('bytedraft_headerfooter') || '{}');
-                const projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
-                // Create the document structure with dependencies
-                const documentXml = createDocxDocument(
+                
+                // Use the modern DOCX export implementation
+                await exportProjectToDocxModern(
                     currentProject,
-                    customChangelog,
-                    versionHistory,
-                    getDocumentInfo,
-                    htmlToDocxXml,
-                    processSubsectionsRecursively,
-                    generateDocInfoTableDOCX,
-                    escapeXml
+                    customChangelog[currentProject.id] || '',
+                    versionHistory.filter(v => v.projectId === currentProject.id)
                 );
-                const stylesXml = createDocxStyles();
-                const numberingXml = createDocxNumbering();
-                const settingsXml = createDocxSettings();
-                const contentTypesXml = createDocxContentTypes();
-                const relsXml = createDocxRels();
-                // Generate header/footer XML
-                const headerXml = createDocxHeader(projectHeaderFooter.header);
-                const footerXml = createDocxFooter(projectHeaderFooter.footer);
-                // Add files to zip
-                zip.file('word/document.xml', documentXml);
-                zip.file('word/styles.xml', stylesXml);
-                zip.file('word/numbering.xml', numberingXml);
-                zip.file('word/settings.xml', settingsXml);
-                zip.file('[Content_Types].xml', contentTypesXml);
-                zip.file('_rels/.rels', relsXml);
-                zip.file('word/_rels/document.xml.rels', createDocxDocumentRels());
-                zip.file('word/header1.xml', headerXml);
-                zip.file('word/footer1.xml', footerXml);
-                // Generate and download
-                const blob = await zip.generateAsync({type: 'blob'});
-                downloadFile(blob, `${currentProject.name.replace(/[^a-z0-9]/gi, '_')}.docx`);
+                
                 console.log('DOCX export completed successfully');
             } catch (error) {
                 console.error('Error in DOCX export:', error);
-                try {
-                    const documentXml = createDocxDocument(
-                        currentProject,
-                        customChangelog,
-                        versionHistory,
-                        getDocumentInfo,
-                        () => '',
-                        () => '',
-                        () => '',
-                        (text) => text
-                    );
-                    console.log('Generated document.xml (first 1000 chars):', documentXml.slice(0, 1000));
-                } catch (e) {
-                    console.error('Error generating document.xml:', e);
-                }
                 alert('Error creating DOCX file. Please try again.');
             }
         }
 
-        async function exportToPDF() {
-            updateAllSectionContents();
-            saveProject();
-            const doc = new window.jspdf.jsPDF();
-            let y = 20;
-            y += 84; // Title offset
-            doc.setFontSize(24);
-            doc.setFont(undefined, 'bold');
-            doc.text(currentProject.name, 105, y, { align: 'center' });
-            y += 20;
-            if (currentProject.description) {
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'normal');
-                const descLines = doc.splitTextToSize(currentProject.description, 170);
-                doc.text(descLines, 105, y, { align: 'center' });
-                y += descLines.length * 7 + 10;
-            }
-            const info = getDocumentInfo(currentProject.id);
-            y += 9 * 7;
-            y = generateDocInfoTablePDF(doc, info, y);
-            y += 10 * 7;
-            
-            // Add changelog page between title and TOC
-            doc.addPage();
-            y = 20;
-            // Add 5 lines of spacing from top
-            y += 35; // 5 lines * 7 points per line
-            
-            doc.setFontSize(16);
-            doc.setFont(undefined, 'bold');
-            doc.text('Document Changelog', 20, y);
-            y += 20;
-            
-            // Get changelog data
-            const changelogData = customChangelog[currentProject.id];
-            let changelogRows = [];
-            
-            if (changelogData) {
-                try {
-                    changelogRows = JSON.parse(changelogData);
-                } catch (e) {
-                    console.error('Error parsing changelog data:', e);
-                }
-            }
-            
-            if (changelogRows && changelogRows.length > 0) {
-                // Create table headers
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                const headers = ['Version Number', 'Approved Date', 'Author', 'Reviewer', 'Approver for Change', 'Description'];
-                const colWidths = [25, 25, 25, 25, 30, 50];
-                const colStarts = [20, 45, 70, 95, 120, 150];
-                
-                // Draw table headers
-                headers.forEach((header, index) => {
-                    doc.text(header, colStarts[index], y);
-                });
-                y += 8;
-                
-                // Draw header line
-                doc.line(20, y, 190, y);
-                y += 5;
-                
-                // Draw table rows
-                doc.setFont(undefined, 'normal');
-                changelogRows.forEach((row, rowIndex) => {
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    
-                    const rowData = [
-                        row.version || '',
-                        row.date || '',
-                        row.author || '',
-                        row.reviewer || '',
-                        row.approver || '',
-                        row.desc || ''
-                    ];
-                    
-                    // Draw row content
-                    rowData.forEach((cell, colIndex) => {
-                        const cellText = doc.splitTextToSize(cell, colWidths[colIndex] - 2);
-                        doc.text(cellText, colStarts[colIndex], y);
-                    });
-                    
-                    y += Math.max(8, rowData[5] ? doc.splitTextToSize(rowData[5], 48).length * 4 : 8);
-                    
-                    // Draw row line
-                    doc.line(20, y, 190, y);
-                    y += 3;
-                });
-            } else {
-                // Fallback to version history if no custom changelog
-                const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id).slice(-5);
-                if (projectVersions.length > 0) {
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Version', 20, y);
-                    doc.text('Description', 50, y);
-                    doc.text('Date', 140, y);
-                    y += 5;
-                    doc.setFont(undefined, 'normal');
-                    projectVersions.forEach((version, index) => {
-                        doc.text((projectVersions.length - index).toString(), 20, y);
-                        doc.text(version.description, 50, y);
-                        doc.text(new Date(version.timestamp).toLocaleDateString(), 140, y);
-                        y += 5;
-                    });
-                    y += 5;
-                } else {
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'normal');
-                    doc.text('No version history available.', 20, y);
-                    y += 10;
-                }
-            }
-            
-            doc.addPage();
-            y = 20;
-            doc.setFontSize(22);
-            doc.setTextColor(37, 99, 235);
-            doc.setFont(undefined, 'bold');
-            doc.text('Table of Contents', 20, y);
-            y += 12;
-            doc.setFontSize(12);
-            doc.setTextColor(0,0,0);
-            doc.setFont('helvetica', 'normal');
-            const toc = generateTOC();
-            toc.forEach((item, idx) => {
-                let entryNum = `${item.number}.`;
-                let entryTitle = item.title;
-                let pageNum = `${4 + idx}`;
-                const leftX = 20;
-                const numWidth = doc.getTextWidth(entryNum + ' ');
-                const titleWidth = doc.getTextWidth(entryTitle + ' ');
-                const pageWidth = doc.getTextWidth(pageNum);
-                const rightX = 200;
-                const dotsStart = leftX + numWidth + titleWidth + 2;
-                const dotsEnd = rightX - pageWidth - 2;
-                let dots = '';
-                let dotsWidth = doc.getTextWidth('.')
-                let dotsCount = Math.floor((dotsEnd - dotsStart) / dotsWidth);
-                for (let i = 0; i < dotsCount; i++) dots += '.';
-                doc.text(entryNum, leftX, y);
-                doc.text(entryTitle, leftX + numWidth, y);
-                doc.text(dots, dotsStart, y);
-                doc.text(pageNum, rightX, y, { align: 'right' });
-                y += 8;
-            });
-            if (customFields.length > 0) {
-                y += 20;
-                doc.setFontSize(12);
-                doc.setFont(undefined, 'bold');
-                doc.text('Project Information', 20, y);
-                y += 10;
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                doc.text('Field Name', 20, y);
-                doc.text('Value', 100, y);
-                y += 5;
-                doc.setFont(undefined, 'normal');
-                customFields.forEach(field => {
-                    doc.text(field.name, 20, y);
-                    doc.text(field.value || 'N/A', 100, y);
-                    y += 5;
-                });
-                y += 5;
-            }
-            doc.addPage();
-            y = 20;
-            function renderUnderline(doc, text, x, y, fontSize, font) {
-                // Simulate underline by drawing a line under the text
-                const textWidth = doc.getTextWidth(text);
-                const descent = fontSize * 0.1;
-                doc.line(x, y + descent, x + textWidth, y + descent);
-            }
-            function renderRuns(doc, runs, x, y, baseFont, baseSize) {
-                let curX = x;
-                for (let run of runs) {
-                    let font = 'helvetica';
-                    if (run.fontFamily) {
-                        const fam = run.fontFamily.toLowerCase();
-                        if (fam.includes('times')) font = 'times';
-                        else if (fam.includes('courier')) font = 'courier';
-                    }
-                    let size = run.fontSize || baseSize || 10;
-                    let style = 'normal';
-                    if (run.bold && run.italic) style = (font === 'helvetica') ? 'boldoblique' : 'bolditalic';
-                    else if (run.bold) style = 'bold';
-                    else if (run.italic) style = (font === 'helvetica') ? 'oblique' : 'italic';
-                    // Fallback: if italic is not available, use normal
-                    try { doc.setFont(font, style); } catch { doc.setFont(font, 'normal'); }
-                    doc.setFontSize(size);
-                    let text = run.text;
-                    if (run.isLink && run.href) text += ` [${run.href}]`;
-                    doc.text(text, curX, y, { baseline: 'top' });
-                    if (run.underline) renderUnderline(doc, text, curX, y, size, font);
-                    curX += doc.getTextWidth(text);
-                }
-            }
-            function exportSectionTree(node, numberParts) {
-                const numberStr = numberParts.join('.');
-                const fontSize = 16 - numberParts.length * 2;
-                doc.setFontSize(fontSize);
-                doc.setFont('helvetica', 'bold');
-                doc.text(`${numberStr} ${node.title}`, 20, y);
-                y += 10;
-                // Main content
-                if (node.content) {
-                    const blocks = htmlToPdfRuns(node.content);
-                    for (let block of blocks) {
-                        let align = block.align || 'left';
-                        let lineHeight = 7;
-                        // Handle lists
-                        if (block.isList) {
-                            // Always use standard font/size for bullet/number and text
-                            let bulletText = block.isNumbered ? `${block.listIndex}.` : '\u2022';
-                            let bulletX = 25;
-                            let textX = 35;
-                            doc.setFont('helvetica', 'normal');
-                            doc.setFontSize(10);
-                            // Render bullet/number
-                            doc.text(bulletText, bulletX, y);
-                            // Render the runs for the list item, always with font size 10, normal
-                            renderRuns(doc, block.runs, textX, y, 'helvetica', 10);
-                        } else {
-                            let x = 20;
-                            if (align === 'center') x = 105;
-                            if (align === 'right') x = 200;
-                            renderRuns(doc, block.runs, x, y, 'helvetica', 10);
-                        }
-                        y += lineHeight;
-                        if (y > 270) {
-                            doc.addPage();
-                            y = 20;
-                        }
-                    }
-                } else {
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text('[No content available]', 20, y);
-                    y += 7;
-                }
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                if (node.subsections && node.subsections.length > 0) {
-                    node.subsections.forEach((sub, idx) => {
-                        exportSectionTree(sub, numberParts.concat(idx + 1));
-                    });
-                }
-            }
-            currentProject.sections.forEach((section, index) => {
-                exportSectionTree(section, [index + 1]);
-            });
-            doc.save(`${currentProject.name}.pdf`);
-        }
+
 
         function downloadFile(blob, filename) {
             const url = URL.createObjectURL(blob);
@@ -1618,7 +1910,7 @@
             const totalPages = pageMap.length ? pageMap[pageMap.length - 1] : '';
             container.innerHTML += `<div class="mb-2"><strong>Estimated Pages:</strong> <span class="text-muted">${totalPages || ''} total</span></div>`;
             // TOC Title
-            container.innerHTML += `<div style="font-size:1.3em;font-weight:bold;color:#2563eb;margin-bottom:8px;">Table of Contents</div>`;
+            container.innerHTML += `<div style="font-size:1.3em;font-weight:bold;color:var(--primary-color);margin-bottom:8px;">Table of Contents</div>`;
             // TOC Items (no dotted leader or page number)
             toc.forEach((item, idx) => {
                 container.innerHTML += `<div class="toc-item level-${item.level}" data-path="${item.path}" style="padding-left:${(item.level - 1) * 16}px; cursor:pointer;"><span style="font-weight:bold;">${item.number}.</span> ${item.title}</div>`;
@@ -2764,6 +3056,94 @@
             xml += '</w:p></w:ftr>';
             return xml;
         }
+
+        // Theme Management
+        let currentTheme = 'light';
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('bytedraft-theme') || 'light';
+            currentTheme = savedTheme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeToggleButton();
+        }
+
+        function toggleTheme() {
+            // Update theme state
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            console.log('Theme toggled to:', currentTheme);
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('bytedraft-theme', currentTheme);
+            updateThemeToggleButton();
+            
+            // Force a complete theme refresh for all editors
+            setTimeout(() => {
+                forceThemeRefresh();
+            }, 100);
+        }
+
+        function updateThemeToggleButton() {
+            const themeToggle = document.getElementById('themeToggle');
+            const icon = themeToggle.querySelector('i');
+            if (currentTheme === 'dark') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        function forceThemeRefresh() {
+            // Force a complete re-render of all sections with current theme
+            if (currentProject && window.tinymce) {
+                console.log('Force theme refresh - current theme:', currentTheme);
+                const editors = window.tinymce.editors;
+                
+                // Store content from all editors
+                const editorContents = {};
+                editors.forEach(editor => {
+                    const editorId = editor.id;
+                    editorContents[editorId] = editor.getContent();
+                });
+                
+                // Destroy all editors
+                editors.forEach(editor => {
+                    editor.destroy();
+                });
+                
+                // Clear and re-render sections
+                const container = document.getElementById('sectionsContainer');
+                if (container) {
+                    container.innerHTML = '';
+                    currentProject.sections.forEach((section, index) => {
+                        renderSubsectionTree(section, [index], container, 0);
+                    });
+                }
+                
+                // Restore content
+                setTimeout(() => {
+                    Object.keys(editorContents).forEach(editorId => {
+                        const editor = window.tinymce.get(editorId);
+                        if (editor) {
+                            editor.setContent(editorContents[editorId]);
+                        }
+                    });
+                }, 200);
+            }
+        }
+
+        // Initialize theme when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            
+            // Add event listener for theme toggle button
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Ensure theme is applied to any existing editors after a short delay
+            setTimeout(() => {
+                if (currentProject && window.tinymce) {
+                    forceThemeRefresh();
+                }
+            }, 500);
+        });
     </script>
 </body>
 </html> 
