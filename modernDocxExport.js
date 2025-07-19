@@ -16,64 +16,35 @@ class ModernDocxExporter {
         }
 
         try {
-            console.log('Starting DOCX export for project:', project.name);
-            
             // Collect all content from sections and subsections
-            console.log('Step 1: Collecting content...');
             const allContent = this.collectAllContent(project);
-            console.log('Content collected, length:', allContent.length);
             
             // Clean up the content for better DOCX conversion
-            console.log('Step 2: Cleaning content...');
             const cleanedContent = this.cleanContentForDocx(allContent);
-            console.log('Content cleaned, length:', cleanedContent.length);
             
             // Convert HTML to DOCX elements
-            console.log('Step 3: Converting HTML to DOCX elements...');
             const docxElements = this.htmlToDocxElements(cleanedContent);
-            console.log('DOCX elements created, count:', docxElements.length);
             
             // Add title page (includes document info)
-            console.log('Step 4: Creating title page...');
             const titlePage = this.createTitlePage(project);
-            console.log('Title page created, elements:', titlePage.length);
             
             // Add changelog page as second page
-            console.log('Step 5: Creating changelog page...');
             const changelogPage = this.createChangelogPage(project);
-            console.log('Changelog page created, elements:', changelogPage.length);
             
             // Add TOC page as third page
-            console.log('Step 6: Creating TOC page...');
             const tocPage = this.createTOCPage(project);
-            console.log('TOC page created, elements:', tocPage.length);
-            
-            // Step 7: Elements prepared for separate sections
-            console.log('Step 7: Elements prepared for separate sections...');
-            console.log('Title page elements:', titlePage.length);
-            console.log('Changelog elements:', changelogPage.length);
-            console.log('TOC elements:', tocPage.length);
-            console.log('Main content elements:', docxElements.length);
             
             // Get custom header and footer from localStorage
             const headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
             const projectHeaderFooter = headerFooter[project.id] || { header: '', footer: '' };
             
-            console.log('Using custom header/footer data:', {
-                projectId: project.id,
-                header: projectHeaderFooter.header || '(using default)',
-                footer: projectHeaderFooter.footer || '(using default)'
-            });
+
             
             // Process header text to replace {{title}} with project name
             let headerText = projectHeaderFooter.header || project.name;
             headerText = headerText.replace(/\{\{title\}\}/g, project.name);
             
-            console.log('Header processing:', {
-                original: projectHeaderFooter.header || project.name,
-                processed: headerText,
-                projectName: project.name
-            });
+
             
             // Process footer text to replace {{page}} and {{title}} variables
             let footerText = projectHeaderFooter.footer || 'ByteDraft Document | Generated on ' + new Date().toLocaleDateString();
@@ -81,11 +52,7 @@ class ModernDocxExporter {
             // Replace {{title}} with project name
             footerText = footerText.replace(/\{\{title\}\}/g, project.name);
             
-            console.log('Footer processing:', {
-                original: projectHeaderFooter.footer || 'ByteDraft Document | Generated on ' + new Date().toLocaleDateString(),
-                processed: footerText,
-                projectName: project.name
-            });
+
             
             // Create headers and footers using custom data
             const header = new this.docx.Header({
@@ -162,7 +129,6 @@ class ModernDocxExporter {
             });
 
             // Create the document with multiple sections
-            console.log('Step 8: Creating DOCX document...');
             const doc = new this.docx.Document({
                 sections: [
                     // Section 1: Title page, changelog, TOC (no headers/footers)
@@ -223,14 +189,8 @@ class ModernDocxExporter {
                     }
                 ]
             });
-            console.log('Document created successfully');
-            
             // Generate and download the file
-            console.log('Step 9: Generating blob...');
             const blob = await this.docx.Packer.toBlob(doc);
-            console.log('Blob generated, size:', blob.size);
-            
-            console.log('Step 10: Downloading file...');
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -239,8 +199,6 @@ class ModernDocxExporter {
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
-            console.log('DOCX export completed successfully');
             
         } catch (error) {
             console.error('Error exporting to DOCX:', error);
@@ -293,17 +251,7 @@ class ModernDocxExporter {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         
-        // Debug: Check for images
-        const images = tempDiv.querySelectorAll('img');
-        console.log('Found images in content:', images.length);
-        images.forEach((img, index) => {
-            console.log(`Image ${index + 1}:`, {
-                src: img.src?.substring(0, 50) + '...',
-                alt: img.alt,
-                width: img.width,
-                height: img.height
-            });
-        });
+
         
         // Remove inline styles that might interfere with DOCX conversion
         const elementsWithStyles = tempDiv.querySelectorAll('[style]');
@@ -344,13 +292,8 @@ class ModernDocxExporter {
             
             const elements = [];
             
-            console.log('Starting HTML to DOCX conversion...');
-            console.log('HTML content length:', html.length);
-            
             // Process each child node recursively
             this.processNode(tempDiv, elements);
-            
-            console.log('Conversion complete. Generated elements:', elements.length);
             
             return elements;
         } catch (error) {
@@ -369,7 +312,7 @@ class ModernDocxExporter {
             if (node.nodeType === Node.ELEMENT_NODE) {
                 const tagName = node.tagName.toLowerCase();
                 
-                console.log('Processing element:', tagName);
+
                 
                 switch (tagName) {
                 case 'h1':
@@ -418,7 +361,7 @@ class ModernDocxExporter {
                     // Check if paragraph contains images
                     const imgElements = node.querySelectorAll('img');
                     if (imgElements.length > 0) {
-                        console.log(`Found ${imgElements.length} image(s) in paragraph`);
+
                         
                         // Process each image in the paragraph
                         imgElements.forEach(img => {
@@ -471,7 +414,7 @@ class ModernDocxExporter {
                     this.processTable(node, elements);
                     break;
                 case 'img':
-                    console.log('Processing img element:', node);
+    
                     this.processImage(node, elements);
                     break;
                 case 'blockquote':
@@ -508,7 +451,7 @@ class ModernDocxExporter {
         const width = imgElement.getAttribute('width') || 400;
         const height = imgElement.getAttribute('height') || 300;
         
-        console.log('Processing image:', { src: src?.substring(0, 50) + '...', alt, width, height });
+        
         
         if (src) {
             try {
@@ -524,11 +467,10 @@ class ModernDocxExporter {
                     }
                     imageData = bytes;
                     
-                    console.log('Image data converted successfully, size:', imageData.length);
+
                 } else {
                     // For external URLs, we would need to fetch them
                     // For now, we'll skip external images in DOCX export
-                    console.warn('External images are not supported in DOCX export');
                     elements.push(new this.docx.Paragraph({
                         children: [new this.docx.TextRun({ text: `[External Image: ${alt}]` })]
                     }));
@@ -551,7 +493,7 @@ class ModernDocxExporter {
                         alignment: this.docx.AlignmentType.CENTER
                     }));
                     
-                    console.log('Image added successfully using ImageRun');
+
                     
                 } catch (imageError) {
                     console.error('ImageRun failed, trying alternative method:', imageError);
@@ -571,7 +513,7 @@ class ModernDocxExporter {
                             alignment: this.docx.AlignmentType.CENTER
                         }));
                         
-                        console.log('Image added successfully using EMU conversion');
+
                         
                     } catch (emuError) {
                         console.error('EMU conversion failed:', emuError);
@@ -587,7 +529,7 @@ class ModernDocxExporter {
                                 alignment: this.docx.AlignmentType.CENTER
                             }));
                             
-                            console.log('Image added successfully without transformation');
+
                             
                         } catch (simpleError) {
                             console.error('Simple image addition failed:', simpleError);
@@ -604,7 +546,6 @@ class ModernDocxExporter {
                 }));
             }
         } else {
-            console.warn('No src attribute found for image');
             elements.push(new this.docx.Paragraph({
                 children: [new this.docx.TextRun({ text: `[Image: ${alt}]` })]
             }));
@@ -736,11 +677,30 @@ class ModernDocxExporter {
             const tableRowChildren = [];
             
             cells.forEach(cell => {
-                const children = this.processInlineElements(cell);
+                // Process all content in the cell, including images
+                const cellContent = [];
+                this.processNode(cell, cellContent);
+                
+                // Get cell styling
+                const cellStyle = this.getCellStyling(cell);
+                
+                // Create table cell with proper styling and content
                 const tableCell = new this.docx.TableCell({
-                    children: [new this.docx.Paragraph({ children: children })],
-                    width: { size: 100, type: this.docx.WidthType.PERCENTAGE }
+                    children: cellContent.length > 0 ? cellContent : [new this.docx.Paragraph({ text: ' ' })],
+                    width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
+                    margins: {
+                        top: 100,
+                        bottom: 100,
+                        left: 100,
+                        right: 100
+                    },
+                    verticalAlign: cellStyle.verticalAlign
                 });
+                
+                // Apply shading if available
+                if (cellStyle.shading) {
+                    tableCell.shading = cellStyle.shading;
+                }
                 tableRowChildren.push(tableCell);
             });
             
@@ -753,10 +713,201 @@ class ModernDocxExporter {
         if (tableRows.length > 0) {
             const table = new this.docx.Table({
                 rows: tableRows,
-                width: { size: 100, type: this.docx.WidthType.PERCENTAGE }
+                width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
+                borders: {
+                    top: { style: this.docx.BorderStyle.SINGLE, size: 1 },
+                    bottom: { style: this.docx.BorderStyle.SINGLE, size: 1 },
+                    left: { style: this.docx.BorderStyle.SINGLE, size: 1 },
+                    right: { style: this.docx.BorderStyle.SINGLE, size: 1 },
+                    insideHorizontal: { style: this.docx.BorderStyle.SINGLE, size: 1 },
+                    insideVertical: { style: this.docx.BorderStyle.SINGLE, size: 1 }
+                }
             });
             elements.push(table);
         }
+    }
+
+    getCellStyling(cell) {
+        const style = cell.getAttribute('style') || '';
+        const className = cell.className || '';
+        const isHeader = cell.tagName.toLowerCase() === 'th';
+        
+        let shading = undefined;
+        let verticalAlign = this.docx.VerticalAlign.TOP;
+        
+        // Check if cell has any child elements with background colors
+        const cellChildren = cell.querySelectorAll('*');
+        
+        // Look for background colors in child elements (TinyMCE might apply colors to content)
+        for (let child of cellChildren) {
+            const childStyle = child.getAttribute('style') || '';
+            const childComputedStyle = window.getComputedStyle(child);
+            const childBgColor = childComputedStyle.backgroundColor;
+            
+            if (childStyle.includes('background-color:')) {
+                const bgMatch = childStyle.match(/background-color:\s*([^;]+)/);
+                if (bgMatch) {
+                    const color = this.convertColorToHex(bgMatch[1].trim());
+                    if (color) {
+                        shading = { fill: color };
+                        break;
+                    }
+                }
+            } else if (childBgColor && childBgColor !== 'rgba(0, 0, 0, 0)' && childBgColor !== 'transparent') {
+                const color = this.convertColorToHex(childBgColor);
+                if (color) {
+                    shading = { fill: color };
+                    break;
+                }
+            }
+        }
+        
+        // Handle background colors from inline styles on the cell itself
+        if (!shading && style.includes('background-color:')) {
+            const bgMatch = style.match(/background-color:\s*([^;]+)/);
+            if (bgMatch) {
+                const color = this.convertColorToHex(bgMatch[1].trim());
+                if (color) {
+                    shading = { fill: color };
+                }
+            }
+        }
+        
+        // Check computed styles as fallback
+        if (!shading) {
+            const computedStyle = window.getComputedStyle(cell);
+            const bgColor = computedStyle.backgroundColor;
+            
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                const color = this.convertColorToHex(bgColor);
+                if (color) {
+                    shading = { fill: color };
+                }
+            }
+        }
+        
+        // Check for TinyMCE-specific background color attributes
+        if (!shading) {
+            const bgColorAttr = cell.getAttribute('bgcolor');
+            if (bgColorAttr) {
+                const color = this.convertColorToHex(bgColorAttr);
+                if (color) {
+                    shading = { fill: color };
+                }
+            }
+        }
+        
+        // Check for data attributes that TinyMCE might use
+        if (!shading) {
+            const dataBgColor = cell.getAttribute('data-mce-bgcolor') || cell.getAttribute('data-bgcolor');
+            if (dataBgColor) {
+                const color = this.convertColorToHex(dataBgColor);
+                if (color) {
+                    shading = { fill: color };
+                }
+            }
+        }
+        
+        // Handle header styling (yellow background for headers)
+        if (isHeader && !shading) {
+            shading = { fill: 'FFFF00' }; // Yellow for headers
+        }
+        
+        // Handle vertical alignment
+        if (style.includes('vertical-align: middle') || style.includes('vertical-align:middle')) {
+            verticalAlign = this.docx.VerticalAlign.CENTER;
+        } else if (style.includes('vertical-align: bottom') || style.includes('vertical-align:bottom')) {
+            verticalAlign = this.docx.VerticalAlign.BOTTOM;
+        }
+        
+        // Handle common CSS classes
+        if (className.includes('header') || className.includes('th')) {
+            if (!shading) {
+                shading = { fill: 'FFFF00' }; // Yellow for headers
+            }
+        }
+        
+        return { shading, verticalAlign };
+    }
+
+    convertColorToHex(color) {
+        // Handle named colors
+        const colorMap = {
+            'red': 'FF0000',
+            'green': '00FF00',
+            'blue': '0000FF',
+            'yellow': 'FFFF00',
+            'cyan': '00FFFF',
+            'magenta': 'FF00FF',
+            'black': '000000',
+            'white': 'FFFFFF',
+            'gray': '808080',
+            'grey': '808080',
+            'lightgray': 'D3D3D3',
+            'lightgrey': 'D3D3D3',
+            'darkgray': '404040',
+            'darkgrey': '404040',
+            'orange': 'FFA500',
+            'purple': '800080',
+            'brown': 'A52A2A',
+            'pink': 'FFC0CB',
+            'lime': '00FF00',
+            'navy': '000080',
+            'teal': '008080',
+            'silver': 'C0C0C0',
+            'gold': 'FFD700',
+            'indigo': '4B0082',
+            'violet': 'EE82EE',
+            'coral': 'FF7F50',
+            'salmon': 'FA8072',
+            'khaki': 'F0E68C',
+            'plum': 'DDA0DD',
+            'turquoise': '40E0D0',
+            'azure': 'F0FFFF',
+            'ivory': 'FFFFF0',
+            'wheat': 'F5DEB3',
+            'beige': 'F5F5DC',
+            'lavender': 'E6E6FA',
+            'mint': 'F5FFFA',
+            'peach': 'FFDAB9',
+            'cream': 'FFFDD0',
+            'rose': 'FFE4E1'
+        };
+        
+        // Remove spaces and convert to lowercase
+        color = color.toLowerCase().replace(/\s/g, '');
+        
+        // Check if it's a named color
+        if (colorMap[color]) {
+            return colorMap[color];
+        }
+        
+        // Handle hex colors
+        if (color.startsWith('#')) {
+            return color.substring(1).toUpperCase();
+        }
+        
+        // Handle rgb/rgba colors
+        if (color.startsWith('rgb')) {
+            const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            if (match) {
+                const r = parseInt(match[1]).toString(16).padStart(2, '0');
+                const g = parseInt(match[2]).toString(16).padStart(2, '0');
+                const b = parseInt(match[3]).toString(16).padStart(2, '0');
+                return (r + g + b).toUpperCase();
+            }
+        }
+        
+        // Handle hsl/hsla colors
+        if (color.startsWith('hsl')) {
+            // Simple conversion for common HSL values
+            if (color.includes('hsl(0, 0%, 0%)')) return '000000'; // black
+            if (color.includes('hsl(0, 0%, 100%)')) return 'FFFFFF'; // white
+            if (color.includes('hsl(0, 0%, 50%)')) return '808080'; // gray
+            // Add more HSL conversions as needed
+        }
+        
+        return undefined;
     }
 
     processBlockquote(element, elements) {

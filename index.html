@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="7ANG0N1N3">
+    <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
+    <meta name="version" content="0.0.30">
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
@@ -1971,186 +1974,7 @@
             };
         }
 
-        // Helper function to convert HTML to RTF
-        function convertHtmlToRtf(htmlContent) {
-            console.log('convertHtmlToRtf called with:', htmlContent);
-            
-            if (!htmlContent || htmlContent.trim() === '') {
-                console.log('Empty content detected, returning placeholder');
-                return '\\par [No content available]\\par';
-            }
-            
-            try {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = htmlContent;
-                
-                // Check if the content is just empty paragraphs
-                const textContent = tempDiv.textContent || tempDiv.innerText || '';
-                console.log('Text content extracted:', textContent);
-                if (!textContent.trim()) {
-                    console.log('No text content found in HTML, returning placeholder');
-                    return '\\par [No content available]\\par';
-                }
-                
-                function imageToRtfPict(img) {
-                    const src = img.getAttribute('src');
-                    if (!src || !src.startsWith('data:image/')) return '[Image not exported]';
-                    // Extract base64 data
-                    const match = src.match(/^data:image\/(png|jpeg);base64,(.*)$/);
-                    if (!match) return '[Image not exported]';
-                    const format = match[1];
-                    const base64 = match[2];
-                    // Convert base64 to hex
-                    const binary = atob(base64);
-                    let hex = '';
-                    for (let i = 0; i < binary.length; i++) {
-                        let h = binary.charCodeAt(i).toString(16);
-                        if (h.length < 2) h = '0' + h;
-                        hex += h;
-                    }
-                    // Get width/height from style or attributes
-                    let width = '';
-                    let height = '';
-                    if (img.style && img.style.width) {
-                        width = parseInt(img.style.width);
-                    } else if (img.getAttribute('width')) {
-                        width = parseInt(img.getAttribute('width'));
-                    }
-                    if (img.style && img.style.height) {
-                        height = parseInt(img.style.height);
-                    } else if (img.getAttribute('height')) {
-                        height = parseInt(img.getAttribute('height'));
-                    }
-                    // If width/height are in px, convert to twips (1 px = 15 twips)
-                    if (width) width = Math.round(width * 15);
-                    if (height) height = Math.round(height * 15);
-                    let sizeStr = '';
-                    if (width) sizeStr += ` \\picwgoal${width}`;
-                    if (height) sizeStr += ` \\pichgoal${height}`;
-                    let pictType = format === 'png' ? '\\pngblip' : '\\jpegblip';
-                    return `\\par \\pict${pictType}${sizeStr} ${hex} \\par`;
-                }
-                
-                function walk(node) {
-                    let rtf = '';
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        const text = node.textContent.replace(/\s+/g, ' ');
-                        return text;
-                    }
-                    if (node.nodeType !== Node.ELEMENT_NODE) return '';
-                    
-                    const tag = node.tagName.toLowerCase();
-                    
-                    if (tag === 'img') {
-                        return imageToRtfPict(node);
-                    }
-                    if (tag === 'br') return '\\par ';
-                    if (tag === 'p' || tag === 'div') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        // Only add paragraph break if there's actual content
-                        if (inner.trim()) {
-                            return inner + '\\par ';
-                        } else {
-                            return inner;
-                        }
-                    }
-                    if (tag === 'li') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\bullet ' + inner + '\\par ';
-                    }
-                    if (tag === 'ul' || tag === 'ol') {
-                        return Array.from(node.childNodes).map(walk).join('');
-                    }
-                    if (tag === 'strong' || tag === 'b') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\b ' + inner + '\\b0 ';
-                    }
-                    if (tag === 'em' || tag === 'i') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\i ' + inner + '\\i0 ';
-                    }
-                    if (tag === 'u') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\ul ' + inner + '\\ul0 ';
-                    }
-                    if (tag === 'h1') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\b\\fs28 ' + inner + '\\b0\\fs24\\par ';
-                    }
-                    if (tag === 'h2') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\b\\fs24 ' + inner + '\\b0\\fs24\\par ';
-                    }
-                    if (tag === 'h3') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\b\\fs20 ' + inner + '\\b0\\fs24\\par ';
-                    }
-                    if (tag === 'blockquote') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\par \\i ' + inner + '\\i0\\par ';
-                    }
-                    if (tag === 'pre') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\par \\f1 ' + inner + '\\f0\\par ';
-                    }
-                    if (tag === 'code') {
-                        let inner = Array.from(node.childNodes).map(walk).join('');
-                        return '\\f1 ' + inner + '\\f0 ';
-                    }
-                    // Inline elements: span, a, etc.
-                    if (['span', 'a'].includes(tag)) {
-                        return Array.from(node.childNodes).map(walk).join('');
-                    }
-                    // Fallback: walk children
-                    return Array.from(node.childNodes).map(walk).join('');
-                }
-                
-                let rtfText = walk(tempDiv);
-                
-                // Convert HTML entities
-                rtfText = rtfText.replace(/&nbsp;/g, ' ');
-                rtfText = rtfText.replace(/&amp;/g, '&');
-                rtfText = rtfText.replace(/&lt;/g, '<');
-                rtfText = rtfText.replace(/&gt;/g, '>');
-                rtfText = rtfText.replace(/&quot;/g, '"');
-                rtfText = rtfText.replace(/&#39;/g, "'");
-                
-                // Clean up multiple line breaks
-                rtfText = rtfText.replace(/\\par(\\par)+/g, '\\par\\par');
-                
-                // Remove leading/trailing whitespace
-                rtfText = rtfText.trim();
-                
-                if (!rtfText || rtfText.length === 0) {
-                    console.log('RTF conversion resulted in empty text, trying fallback approach');
-                    // Fallback: try to extract plain text and convert to RTF
-                    const plainText = tempDiv.textContent || tempDiv.innerText || '';
-                    if (plainText.trim()) {
-                        console.log('Using fallback plain text conversion');
-                        return plainText.replace(/\n/g, '\\par ') + '\\par';
-                    }
-                    console.log('No content available, returning placeholder');
-                    return '\\par [No content available]\\par';
-                }
-                
-                // Additional fallback: if RTF is too short, try simple HTML stripping
-                if (rtfText.length < 10) {
-                    console.log('RTF output too short, trying HTML stripping approach');
-                    const strippedText = htmlContent.replace(/<[^>]+>/g, '').trim();
-                    if (strippedText) {
-                        console.log('Using HTML stripping fallback');
-                        return strippedText.replace(/\n/g, '\\par ') + '\\par';
-                    }
-                }
-                
-                console.log('RTF conversion successful, length:', rtfText.length);
-                return rtfText;
-                
-            } catch (error) {
-                console.error('Error in convertHtmlToRtf:', error);
-                return '\\par [Error converting content]\\par';
-            }
-        }
+
 
         // Header/Footer Modal logic
         function showHeaderFooterModal() {
@@ -2217,57 +2041,7 @@
             console.log('Project saved with updated content');
         }
 
-        // Test function to debug RTF conversion
-        function testRtfConversion() {
-            console.log('=== TESTING RTF CONVERSION ===');
-            if (!currentProject) {
-                console.log('No current project selected');
-                return;
-            }
-            
-            currentProject.sections.forEach((section, index) => {
-                console.log(`\n--- Section ${index}: ${section.title} ---`);
-                console.log('Original HTML content:', section.content);
-                
-                if (section.content) {
-                    const rtfResult = convertHtmlToRtf(section.content);
-                    console.log('RTF conversion result:', rtfResult);
-                    
-                    // Also test the simple HTML stripping approach
-                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
-                    console.log('Stripped HTML text:', strippedText);
-                }
-            });
-        }
 
-        // Test function to create a minimal RTF document
-        function testMinimalRtf() {
-            console.log('=== TESTING MINIMAL RTF ===');
-            if (!currentProject) {
-                console.log('No current project selected');
-                return;
-            }
-            
-            let rtfContent = '{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}';
-            rtfContent += '\\f0\\fs24';
-            rtfContent += '\\viewkind4\\uc1\\pard\\plain\\f0\\fs24';
-            
-            currentProject.sections.forEach((section, index) => {
-                rtfContent += `\\b ${section.title}\\b0\\par\\par`;
-                if (section.content) {
-                    const strippedText = section.content.replace(/<[^>]+>/g, '').trim();
-                    rtfContent += `${strippedText}\\par\\par`;
-                }
-            });
-            
-            rtfContent += '}';
-            
-            console.log('Minimal RTF content:', rtfContent);
-            
-            const blob = new Blob([rtfContent], { type: 'application/msword' });
-            downloadFile(blob, `${currentProject.name}_test.doc`);
-            console.log('Test RTF document created');
-        }
 
         // Test function to create a plain text document
         function testPlainText() {
@@ -2331,7 +2105,6 @@
             console.log('Hardcoded test document created');
         }
 
-        // --- Remove all Quill-specific code and references ---
         // --- Update content capture for export ---
         // Before exporting, walk all sections and subsections recursively and update their .content from TinyMCE:
         function updateAllSectionContents() {
@@ -2355,22 +2128,7 @@
         }
         // Call updateAllSectionContents() before any export or saveProject() call.
 
-        // Add this helper function near your export functions:
-        function htmlToRtf(html) {
-          if (!html) return '';
-          let rtf = html
-            .replace(/<p[^>]*>/gi, '')
-            .replace(/<\/p>/gi, '\\par ')
-            .replace(/<br\s*\/?>/gi, '\\line ')
-            .replace(/\n/g, '\\line ')
-            .replace(/<b>/gi, '\\b ').replace(/<\/b>/gi, '\\b0 ')
-            .replace(/<strong>/gi, '\\b ').replace(/<\/strong>/gi, '\\b0 ')
-            .replace(/<i>/gi, '\\i ').replace(/<\/i>/gi, '\\i0 ')
-            .replace(/<em>/gi, '\\i ').replace(/<\/em>/gi, '\\i0 ')
-            .replace(/<u>/gi, '\\ul ').replace(/<\/u>/gi, '\\ul0 ')
-            .replace(/<[^>]+>/g, '');
-          return rtf;
-        }
+
 
 
         
@@ -2652,32 +2410,7 @@
             bootstrap.Modal.getInstance(document.getElementById('documentInfoModal')).hide();
         }
 
-        // Helper: Generate Document Info Table (RTF)
-        function generateDocInfoTableRTF(info) {
-            // Table with two columns, blue left column, white right column
-            // RTF color table: 0=auto, 1=dark blue, 2=white
-            let rtf = '{\\colortbl ;\\red0\\green32\\blue96;\\red255\\green255\\blue255;}';
-            // Center the table and make second column 50% wider
-            rtf += '\\trowd\\trgaph108\\trleft-108\\trqc'; // Center alignment
-            const rows = [
-                ['Document Title:', info.title],
-                ['Author:', info.author],
-                ['Document Owner:', info.docOwner],
-                ['Process Owner:', info.procOwner],
-                ['Version No:', info.version],
-                ['Effective Date:', info.effDate],
-                ['Last Reviewed Date:', info.lastRev],
-                ['Next Reviewed Date:', info.nextRev],
-                ['Document Link:', info.link],
-            ];
-            rows.forEach(([label, value]) => {
-                rtf += '\\trowd\\trgaph108\\trleft-108\\trqc';
-                rtf += '\\clcbpat1\\clbrdrb\\brdrs\\brdrw10\\cellx2000'; // Blue left cell (narrower)
-                rtf += '\\clcbpat2\\clbrdrb\\brdrs\\brdrw10\\cellx6000'; // White right cell (50% wider)
-                rtf += `\\intbl\\cf1\\b ${label}\\b0\\cell\\cf0 ${value || ''}\\cell\\row`;
-            });
-            return rtf;
-        }
+
         // Helper: Generate Document Info Table (DOCX XML)
         function generateDocInfoTableDOCX(info) {
             const rows = [
