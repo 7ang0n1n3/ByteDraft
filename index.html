@@ -17,8 +17,7 @@
     <script src="libs/tinymce/tinymce.min.js"></script>
     <!-- Templates script -->
     <script src="templates.js"></script>
-    <!-- DOCX Export Module (classic script) -->
-    <script src="docxExport.js"></script>
+
     <!-- Modern DOCX Library -->
     <script src="libs/docx/index.umd.js"></script>
     <!-- Modern DOCX Export Module -->
@@ -190,6 +189,46 @@
 
         .modal-xl {
             max-width: 90%;
+        }
+
+        /* Dark mode modal styling */
+        [data-theme="dark"] .modal-content {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .form-control {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+        }
+
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(13, 110, 253, 0.1);
+            border-color: rgba(13, 110, 253, 0.2);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] code {
+            background-color: var(--surface-color);
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
         }
 
         .code-block {
@@ -1090,16 +1129,23 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Header Content (RTF or plain text)</label>
-                        <textarea class="form-control" id="headerContent" rows="2" placeholder="Enter header content (e.g., Confidential)"></textarea>
+                        <label class="form-label">Header Content</label>
+                        <textarea class="form-control" id="headerContent" rows="2" placeholder="Enter header content (e.g., {{title}} - Confidential)"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Footer Content (RTF or plain text, use {{page}} for page number)</label>
-                        <textarea class="form-control" id="footerContent" rows="2" placeholder="Enter footer content (e.g., Page {{page}} of Company)"></textarea>
+                        <label class="form-label">Footer Content</label>
+                        <textarea class="form-control" id="footerContent" rows="2" placeholder="Enter footer content (e.g., {{title}} | Page {{page}})"></textarea>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Tip:</strong> These will appear on all pages after the Table of Contents. Use <code>{{page}}</code> to insert the page number in the footer.
+                        <strong>Available Variables:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><code>{{title}}</code> - Project name</li>
+                            <li><code>{{page}}</code> - Page number (starts at 4 for main content)</li>
+                        </ul>
+                        <div class="mt-2">
+                            <strong>Layout:</strong> Footer content will be left-aligned, page numbers will be right-aligned.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -1380,10 +1426,10 @@
                     'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                     'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
                     'insertdatetime', 'media', 'table', 'help', 'wordcount', 'save',
-                    'fontfamily', 'fontsize', 'textcolor', 'backcolor', 'emoticons'
+                    'emoticons'
                 ],
                 toolbar: [
-                    'undo redo | formatselect fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
+                    'undo redo | formatselect | bold italic underline strikethrough',
                     'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help'
                 ].join(' | '),
                 font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
@@ -3093,7 +3139,7 @@
 
         function forceThemeRefresh() {
             // Force a complete re-render of all sections with current theme
-            if (currentProject && window.tinymce) {
+            if (currentProject && window.tinymce && window.tinymce.editors) {
                 console.log('Force theme refresh - current theme:', currentTheme);
                 const editors = window.tinymce.editors;
                 
@@ -3111,7 +3157,7 @@
                 
                 // Clear and re-render sections
                 const container = document.getElementById('sectionsContainer');
-                if (container) {
+                if (container && currentProject.sections) {
                     container.innerHTML = '';
                     currentProject.sections.forEach((section, index) => {
                         renderSubsectionTree(section, [index], container, 0);

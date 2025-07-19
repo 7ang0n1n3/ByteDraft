@@ -48,23 +48,180 @@ class ModernDocxExporter {
             const tocPage = this.createTOCPage(project);
             console.log('TOC page created, elements:', tocPage.length);
             
-            // Combine all elements
-            console.log('Step 7: Combining all elements...');
-            const allElements = [
-                ...titlePage,
-                ...changelogPage,
-                ...tocPage,
-                ...docxElements
-            ];
-            console.log('Total elements:', allElements.length);
+            // Step 7: Elements prepared for separate sections
+            console.log('Step 7: Elements prepared for separate sections...');
+            console.log('Title page elements:', titlePage.length);
+            console.log('Changelog elements:', changelogPage.length);
+            console.log('TOC elements:', tocPage.length);
+            console.log('Main content elements:', docxElements.length);
             
-            // Create the document
+            // Get custom header and footer from localStorage
+            const headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            const projectHeaderFooter = headerFooter[project.id] || { header: '', footer: '' };
+            
+            console.log('Using custom header/footer data:', {
+                projectId: project.id,
+                header: projectHeaderFooter.header || '(using default)',
+                footer: projectHeaderFooter.footer || '(using default)'
+            });
+            
+            // Process header text to replace {{title}} with project name
+            let headerText = projectHeaderFooter.header || project.name;
+            headerText = headerText.replace(/\{\{title\}\}/g, project.name);
+            
+            console.log('Header processing:', {
+                original: projectHeaderFooter.header || project.name,
+                processed: headerText,
+                projectName: project.name
+            });
+            
+            // Process footer text to replace {{page}} and {{title}} variables
+            let footerText = projectHeaderFooter.footer || 'ByteDraft Document | Generated on ' + new Date().toLocaleDateString();
+            
+            // Replace {{title}} with project name
+            footerText = footerText.replace(/\{\{title\}\}/g, project.name);
+            
+            console.log('Footer processing:', {
+                original: projectHeaderFooter.footer || 'ByteDraft Document | Generated on ' + new Date().toLocaleDateString(),
+                processed: footerText,
+                projectName: project.name
+            });
+            
+            // Create headers and footers using custom data
+            const header = new this.docx.Header({
+                children: [
+                    new this.docx.Paragraph({
+                        children: [
+                            new this.docx.TextRun({
+                                text: headerText,
+                                bold: true,
+                                size: 20,
+                                color: '2563EB'
+                            })
+                        ],
+                        alignment: this.docx.AlignmentType.LEFT
+                    })
+                ]
+            });
+
+            // Create footer with left-aligned content and right-aligned page number
+            const footer = new this.docx.Footer({
+                children: [
+                    new this.docx.Table({
+                        rows: [
+                            new this.docx.TableRow({
+                                children: [
+                                    // Left-aligned content (without page number)
+                                    new this.docx.TableCell({
+                                        children: [
+                                            new this.docx.Paragraph({
+                                                children: [
+                                                    new this.docx.TextRun({
+                                                        text: footerText.replace(/\{\{page\}\}/g, '').trim(),
+                                                        size: 16,
+                                                        color: '666666'
+                                                    })
+                                                ],
+                                                alignment: this.docx.AlignmentType.LEFT
+                                            })
+                                        ],
+                                        width: { size: 70, type: this.docx.WidthType.PERCENTAGE },
+                                        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+                                    }),
+                                    // Right-aligned page number
+                                    new this.docx.TableCell({
+                                        children: [
+                                            new this.docx.Paragraph({
+                                                children: [
+                                                    new this.docx.TextRun({
+                                                        text: footerText.includes('{{page}}') ? '4' : '',
+                                                        size: 16,
+                                                        color: '666666'
+                                                    })
+                                                ],
+                                                alignment: this.docx.AlignmentType.RIGHT
+                                            })
+                                        ],
+                                        width: { size: 30, type: this.docx.WidthType.PERCENTAGE },
+                                        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+                                    })
+                                ]
+                            })
+                        ],
+                        width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
+                        borders: {
+                            top: { style: this.docx.BorderStyle.NONE },
+                            bottom: { style: this.docx.BorderStyle.NONE },
+                            left: { style: this.docx.BorderStyle.NONE },
+                            right: { style: this.docx.BorderStyle.NONE },
+                            insideHorizontal: { style: this.docx.BorderStyle.NONE },
+                            insideVertical: { style: this.docx.BorderStyle.NONE }
+                        }
+                    })
+                ]
+            });
+
+            // Create the document with multiple sections
             console.log('Step 8: Creating DOCX document...');
             const doc = new this.docx.Document({
-                sections: [{
-                    properties: {},
-                    children: allElements
-                }]
+                sections: [
+                    // Section 1: Title page, changelog, TOC (no headers/footers)
+                    {
+                        properties: {
+                            page: {
+                                margin: {
+                                    top: 1440,    // 1 inch
+                                    right: 1440,  // 1 inch
+                                    bottom: 1440, // 1 inch
+                                    left: 1440    // 1 inch
+                                }
+                            }
+                        },
+                        children: [
+                            // Title page content
+                            ...titlePage,
+                            
+                            // Page break after title page
+                            new this.docx.Paragraph({
+                                pageBreakBefore: true
+                            }),
+                            
+                            // Changelog page content
+                            ...changelogPage,
+                            
+                            
+                            // TOC page content
+                            ...tocPage
+                        ]
+                    },
+                    // Section 2: Main content (with headers/footers)
+                    {
+                        properties: {
+                            page: {
+                                margin: {
+                                    top: 1440,    // 1 inch
+                                    right: 1440,  // 1 inch
+                                    bottom: 1440, // 1 inch
+                                    left: 1440    // 1 inch
+                                },
+                                pageNumbers: {
+                                    start: 4  // Start page numbering at 4
+                                }
+                            }
+                        },
+                        headers: {
+                            default: header
+                        },
+                        footers: {
+                            default: footer
+                        },
+                        children: [
+                            
+                            // Main content
+                            ...docxElements
+                        ]
+                    }
+                ]
             });
             console.log('Document created successfully');
             
@@ -576,9 +733,7 @@ class ModernDocxExporter {
         
         rows.forEach(row => {
             const cells = row.querySelectorAll('td, th');
-            const tableRow = {
-                children: []
-            };
+            const tableRowChildren = [];
             
             cells.forEach(cell => {
                 const children = this.processInlineElements(cell);
@@ -586,9 +741,12 @@ class ModernDocxExporter {
                     children: [new this.docx.Paragraph({ children: children })],
                     width: { size: 100, type: this.docx.WidthType.PERCENTAGE }
                 });
-                tableRow.children.push(tableCell);
+                tableRowChildren.push(tableCell);
             });
             
+            const tableRow = new this.docx.TableRow({
+                children: tableRowChildren
+            });
             tableRows.push(tableRow);
         });
         
@@ -1177,13 +1335,6 @@ class ModernDocxExporter {
                 preserveTabInEntries: true,
                 preserveNewLineInEntries: true,
                 hideTabAndPageNumbersInWebView: true
-            }),
-            
-            
-            // Page break to start main content
-            new this.docx.Paragraph({
-                text: '',
-                pageBreakBefore: true
             })
         ];
     }
