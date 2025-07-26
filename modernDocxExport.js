@@ -284,6 +284,11 @@ class ModernDocxExporter {
             const style = span.getAttribute('style') || '';
             const className = span.getAttribute('class') || '';
             
+            // Skip spans that have background colors - preserve them for table processing
+            if (style.includes('background-color') || style.includes('background:')) {
+                return; // Don't convert spans with background colors
+            }
+            
             // Check for bold styling in various formats
             if (style.includes('font-weight') || className.includes('bold') || className.includes('strong')) {
                 const strong = document.createElement('strong');
@@ -310,13 +315,60 @@ class ModernDocxExporter {
             // Keep only essential styles, remove others
             const style = el.getAttribute('style');
             if (style) {
-                // Special handling for table cells - preserve background colors
+                // Special handling for table cells - preserve background colors and text alignment
                 if (el.tagName.toLowerCase() === 'td' || el.tagName.toLowerCase() === 'th') {
-                    // For table cells, ONLY keep background-color, remove everything else
+                    // For table cells, keep background-color and text-align, remove everything else
+                    let cleanStyle = '';
                     const backgroundMatch = style.match(/background-color\s*:\s*[^;]+;?/);
+                    const textAlignMatch = style.match(/text-align\s*:\s*[^;]+;?/);
+                    
                     if (backgroundMatch) {
-                        const cleanStyle = backgroundMatch[0].trim();
-                        el.setAttribute('style', cleanStyle);
+                        cleanStyle += backgroundMatch[0].trim() + ' ';
+                    }
+                    if (textAlignMatch) {
+                        cleanStyle += textAlignMatch[0].trim() + ' ';
+                    }
+                    
+                    if (cleanStyle.trim()) {
+                        el.setAttribute('style', cleanStyle.trim());
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                } else if (el.tagName.toLowerCase() === 'table') {
+                    // For tables, preserve width, border-collapse, border-style, border-width, margin
+                    let cleanStyle = '';
+                    const widthMatch = style.match(/width\s*:\s*[^;]+;?/);
+                    const borderCollapseMatch = style.match(/border-collapse\s*:\s*[^;]+;?/);
+                    const borderStyleMatch = style.match(/border-style\s*:\s*[^;]+;?/);
+                    const borderWidthMatch = style.match(/border-width\s*:\s*[^;]+;?/);
+                    const marginMatch = style.match(/margin[^;]*;?/g);
+                    
+                    if (widthMatch) cleanStyle += widthMatch[0].trim() + ' ';
+                    if (borderCollapseMatch) cleanStyle += borderCollapseMatch[0].trim() + ' ';
+                    if (borderStyleMatch) cleanStyle += borderStyleMatch[0].trim() + ' ';
+                    if (borderWidthMatch) cleanStyle += borderWidthMatch[0].trim() + ' ';
+                    if (marginMatch) {
+                        marginMatch.forEach(margin => {
+                            cleanStyle += margin.trim() + ' ';
+                        });
+                    }
+                    
+                    if (cleanStyle.trim()) {
+                        el.setAttribute('style', cleanStyle.trim());
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                } else if (el.tagName.toLowerCase() === 'tr') {
+                    // For table rows, preserve height
+                    let cleanStyle = '';
+                    const heightMatch = style.match(/height\s*:\s*[^;]+;?/);
+                    
+                    if (heightMatch) {
+                        cleanStyle += heightMatch[0].trim() + ' ';
+                    }
+                    
+                    if (cleanStyle.trim()) {
+                        el.setAttribute('style', cleanStyle.trim());
                     } else {
                         el.removeAttribute('style');
                     }
@@ -921,12 +973,13 @@ class ModernDocxExporter {
                 // Process cell content with formatting
                 const children = this.processInlineElements(cellElement);
                 
-                // Extract background color from style - try multiple approaches
+                // Extract background color and text alignment from style
                 const style = cellElement.getAttribute('style') || '';
                 
                 // Try different color extraction patterns
                 let bgColor = 'FFFFFF'; // default white
                 
+                // First check the cell's own style
                 // Pattern 1: background-color: #RRGGBB
                 let bgColorMatch = style.match(/background-color:\s*(#[0-9a-fA-F]{6})/i);
                 if (bgColorMatch) {
@@ -960,9 +1013,75 @@ class ModernDocxExporter {
                     }
                 }
                 
-                // Create normal paragraph (no shading on paragraph)
+                // If no background color found on the cell itself, check child elements (spans)
+                if (bgColor === 'FFFFFF') {
+                    const childElements = cellElement.querySelectorAll('*');
+                    for (let child of childElements) {
+                        const childStyle = child.getAttribute('style') || '';
+                        if (childStyle.includes('background-color') || childStyle.includes('background:')) {
+                            // Pattern 1: background-color: #RRGGBB
+                            let childBgMatch = childStyle.match(/background-color:\s*(#[0-9a-fA-F]{6})/i);
+                            if (childBgMatch) {
+                                bgColor = childBgMatch[1];
+                                break;
+                            } else {
+                                // Pattern 2: background-color: #RGB
+                                childBgMatch = childStyle.match(/background-color:\s*(#[0-9a-fA-F]{3})/i);
+                                if (childBgMatch) {
+                                    bgColor = childBgMatch[1];
+                                    break;
+                                } else {
+                                    // Pattern 3: background-color: rgb(r, g, b)
+                                    childBgMatch = childStyle.match(/background-color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+                                    if (childBgMatch) {
+                                        const r = parseInt(childBgMatch[1]).toString(16).padStart(2, '0');
+                                        const g = parseInt(childBgMatch[2]).toString(16).padStart(2, '0');
+                                        const b = parseInt(childBgMatch[3]).toString(16).padStart(2, '0');
+                                        bgColor = `#${r}${g}${b}`;
+                                        break;
+                                    } else {
+                                        // Pattern 4: background: #RRGGBB
+                                        childBgMatch = childStyle.match(/background:\s*(#[0-9a-fA-F]{6})/i);
+                                        if (childBgMatch) {
+                                            bgColor = childBgMatch[1];
+                                            break;
+                                        } else {
+                                            // Pattern 5: background: #RGB
+                                            childBgMatch = childStyle.match(/background:\s*(#[0-9a-fA-F]{3})/i);
+                                            if (childBgMatch) {
+                                                bgColor = childBgMatch[1];
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Extract text alignment
+                let textAlignment = this.docx.AlignmentType.LEFT; // default
+                const textAlignMatch = style.match(/text-align:\s*([^;]+)/i);
+                if (textAlignMatch) {
+                    const align = textAlignMatch[1].trim();
+                    switch (align) {
+                        case 'center':
+                            textAlignment = this.docx.AlignmentType.CENTER;
+                            break;
+                        case 'right':
+                            textAlignment = this.docx.AlignmentType.RIGHT;
+                            break;
+                        case 'justify':
+                            textAlignment = this.docx.AlignmentType.JUSTIFIED;
+                            break;
+                    }
+                }
+                
+                // Create paragraph with proper alignment
                 const paragraph = new this.docx.Paragraph({
-                    children: children.length > 0 ? children : [new this.docx.TextRun({ text: cellElement.textContent })]
+                    children: children.length > 0 ? children : [new this.docx.TextRun({ text: cellElement.textContent })],
+                    alignment: textAlignment
                 });
                 
                 // Create table cell with shading on the CELL itself
@@ -995,13 +1114,41 @@ class ModernDocxExporter {
                 cells.push(tableCell);
             });
             
-            rows.push(new this.docx.TableRow({ children: cells }));
+            // Process row height if specified
+            const rowStyle = rowElement.getAttribute('style') || '';
+            let rowHeight = undefined;
+            const heightMatch = rowStyle.match(/height:\s*([^;]+)/i);
+            if (heightMatch) {
+                const heightValue = heightMatch[1].trim();
+                if (heightValue.includes('px')) {
+                    // Convert px to twips (1 px = 20 twips)
+                    const pxValue = parseFloat(heightValue.replace('px', ''));
+                    rowHeight = Math.round(pxValue * 20);
+                }
+            }
+            
+            // Ensure all children are valid before creating TableRow
+            const validCells = cells.filter(cell => cell !== null && cell !== undefined);
+            
+            const rowProperties = { children: validCells };
+            
+            // Only add height if it's a valid positive number
+            if (rowHeight && rowHeight > 0 && !isNaN(rowHeight)) {
+                // Use the proper format for row height
+                rowProperties.height = {
+                    value: rowHeight,
+                    rule: this.docx.HeightRule.EXACT
+                };
+            }
+            
+            rows.push(new this.docx.TableRow(rowProperties));
         });
         
-        // Extract table width from HTML
+        // Extract table properties from HTML
         const tableStyle = tableElement.getAttribute('style') || '';
         let tableWidth = 100; // default percentage
         let widthType = this.docx.WidthType.PERCENTAGE;
+        let tableAlignment = this.docx.AlignmentType.LEFT; // default
         
         // Try to extract width from style
         const widthMatch = tableStyle.match(/width:\s*([^;]+)/);
@@ -1017,11 +1164,26 @@ class ModernDocxExporter {
             }
         }
         
-        // Force a wider table if no specific width found
-        if (tableWidth < 80) {
-            tableWidth = 100;
-            widthType = this.docx.WidthType.PERCENTAGE;
+        // Extract table alignment from margins
+        const marginLeftMatch = tableStyle.match(/margin-left:\s*([^;]+)/i);
+        const marginRightMatch = tableStyle.match(/margin-right:\s*([^;]+)/i);
+        if (marginLeftMatch && marginRightMatch) {
+            const leftMargin = marginLeftMatch[1].trim();
+            const rightMargin = marginRightMatch[1].trim();
+            if (leftMargin === 'auto' && rightMargin === 'auto') {
+                tableAlignment = this.docx.AlignmentType.CENTER;
+            } else if (rightMargin === 'auto') {
+                tableAlignment = this.docx.AlignmentType.LEFT;
+            } else if (leftMargin === 'auto') {
+                tableAlignment = this.docx.AlignmentType.RIGHT;
+            }
         }
+        
+        // Don't force wider table - respect the original width
+        // if (tableWidth < 80) {
+        //     tableWidth = 100;
+        //     widthType = this.docx.WidthType.PERCENTAGE;
+        // }
         
         // Extract column widths from colgroup/col elements
         let columnWidths = [];
@@ -1055,9 +1217,55 @@ class ModernDocxExporter {
             columnWidths = Array(maxColumns).fill(100 / maxColumns);
         }
         
+        // Extract border properties
+        let borderStyle = this.docx.BorderStyle.SINGLE; // default
+        let borderSize = 1; // default
+        
+        const borderStyleMatch = tableStyle.match(/border-style:\s*([^;]+)/i);
+        if (borderStyleMatch) {
+            const style = borderStyleMatch[1].trim();
+            switch (style) {
+                case 'dotted':
+                    borderStyle = this.docx.BorderStyle.DOTTED;
+                    break;
+                case 'dashed':
+                    borderStyle = this.docx.BorderStyle.DASHED;
+                    break;
+                case 'double':
+                    borderStyle = this.docx.BorderStyle.DOUBLE;
+                    break;
+                case 'thick':
+                    borderStyle = this.docx.BorderStyle.THICK;
+                    break;
+                case 'none':
+                    borderStyle = this.docx.BorderStyle.NONE;
+                    break;
+                default:
+                    borderStyle = this.docx.BorderStyle.SINGLE;
+            }
+        }
+        
+        const borderWidthMatch = tableStyle.match(/border-width:\s*([^;]+)/i);
+        if (borderWidthMatch) {
+            const width = borderWidthMatch[1].trim();
+            if (width.includes('px')) {
+                borderSize = parseFloat(width.replace('px', ''));
+            }
+        }
+        
+        // Check for HTML border attribute
+        const borderAttr = tableElement.getAttribute('border');
+        if (borderAttr && !borderStyleMatch) {
+            // If border attribute exists but no border-style in CSS, use single border
+            borderStyle = this.docx.BorderStyle.SINGLE;
+            borderSize = parseInt(borderAttr) || 1;
+        }
+        
+
+        
         // Only create table if we have rows
         if (rows && rows.length > 0) {
-            elements.push(new this.docx.Table({ 
+            const tableProperties = {
                 rows: rows,
                 width: {
                     size: tableWidth,
@@ -1070,8 +1278,23 @@ class ModernDocxExporter {
                     bottom: 100,
                     left: 100,
                     right: 100
-                }
-            }));
+                },
+                alignment: tableAlignment
+            };
+            
+            // Add borders if they exist
+            if (borderStyle !== this.docx.BorderStyle.NONE) {
+                tableProperties.borders = {
+                    top: { style: borderStyle, size: borderSize },
+                    bottom: { style: borderStyle, size: borderSize },
+                    left: { style: borderStyle, size: borderSize },
+                    right: { style: borderStyle, size: borderSize },
+                    insideHorizontal: { style: borderStyle, size: borderSize },
+                    insideVertical: { style: borderStyle, size: borderSize }
+                };
+            }
+            
+            elements.push(new this.docx.Table(tableProperties));
         }
     }
 
