@@ -251,12 +251,99 @@ class ModernDocxExporter {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         
-
+        // Convert TinyMCE's complex styling to simpler HTML structure
+        // TinyMCE often uses spans with complex styling, we need to convert these to semantic HTML
         
-        // Remove inline styles that might interfere with DOCX conversion
+        // Convert spans with font-weight: bold to <strong> tags
+        const boldSpans = tempDiv.querySelectorAll('span[style*="font-weight: bold"], span[style*="font-weight:bold"], span[style*="font-weight: 700"], span[style*="font-weight:700"]');
+        boldSpans.forEach(span => {
+            const strong = document.createElement('strong');
+            strong.innerHTML = span.innerHTML;
+            span.parentNode.replaceChild(strong, span);
+        });
+        
+        // Convert spans with font-style: italic to <em> tags
+        const italicSpans = tempDiv.querySelectorAll('span[style*="font-style: italic"], span[style*="font-style:italic"]');
+        italicSpans.forEach(span => {
+            const em = document.createElement('em');
+            em.innerHTML = span.innerHTML;
+            span.parentNode.replaceChild(em, span);
+        });
+        
+        // Convert spans with text-decoration: underline to <u> tags
+        const underlineSpans = tempDiv.querySelectorAll('span[style*="text-decoration: underline"], span[style*="text-decoration:underline"]');
+        underlineSpans.forEach(span => {
+            const u = document.createElement('u');
+            u.innerHTML = span.innerHTML;
+            span.parentNode.replaceChild(u, span);
+        });
+        
+        // Handle TinyMCE's specific styling patterns
+        const allSpans = tempDiv.querySelectorAll('span');
+        allSpans.forEach(span => {
+            const style = span.getAttribute('style') || '';
+            const className = span.getAttribute('class') || '';
+            
+            // Check for bold styling in various formats
+            if (style.includes('font-weight') || className.includes('bold') || className.includes('strong')) {
+                const strong = document.createElement('strong');
+                strong.innerHTML = span.innerHTML;
+                span.parentNode.replaceChild(strong, span);
+            }
+            // Check for italic styling
+            else if (style.includes('font-style') || className.includes('italic') || className.includes('em')) {
+                const em = document.createElement('em');
+                em.innerHTML = span.innerHTML;
+                span.parentNode.replaceChild(em, span);
+            }
+            // Check for underline styling
+            else if (style.includes('text-decoration') || className.includes('underline') || className.includes('u')) {
+                const u = document.createElement('u');
+                u.innerHTML = span.innerHTML;
+                span.parentNode.replaceChild(u, span);
+            }
+        });
+        
+        // Remove remaining problematic inline styles that might interfere
         const elementsWithStyles = tempDiv.querySelectorAll('[style]');
         elementsWithStyles.forEach(el => {
-            el.removeAttribute('style');
+            // Keep only essential styles, remove others
+            const style = el.getAttribute('style');
+            if (style) {
+                // Special handling for table cells - preserve background colors
+                if (el.tagName.toLowerCase() === 'td' || el.tagName.toLowerCase() === 'th') {
+                    // For table cells, ONLY keep background-color, remove everything else
+                    const backgroundMatch = style.match(/background-color\s*:\s*[^;]+;?/);
+                    if (backgroundMatch) {
+                        const cleanStyle = backgroundMatch[0].trim();
+                        el.setAttribute('style', cleanStyle);
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                } else {
+                    // For non-table cells, remove background colors too
+                    const cleanStyle = style
+                        .replace(/color\s*:\s*[^;]+;?/g, '')
+                        .replace(/background[^;]*;?/g, '')
+                        .replace(/margin[^;]*;?/g, '')
+                        .replace(/padding[^;]*;?/g, '')
+                        .replace(/font-family[^;]*;?/g, '')
+                        .replace(/font-size[^;]*;?/g, '')
+                        .trim();
+                    
+                    if (cleanStyle) {
+                        el.setAttribute('style', cleanStyle);
+                    } else {
+                        el.removeAttribute('style');
+                    }
+                }
+            }
+        });
+        
+        // Remove class attributes that might interfere
+        const elementsWithClasses = tempDiv.querySelectorAll('[class]');
+        elementsWithClasses.forEach(el => {
+            el.removeAttribute('class');
         });
         
         // Convert divs with only text content to paragraphs
@@ -267,6 +354,28 @@ class ModernDocxExporter {
                 p.textContent = div.textContent;
                 div.parentNode.replaceChild(p, div);
             }
+        });
+        
+        // Ensure proper heading structure
+        const headings = tempDiv.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        headings.forEach(heading => {
+            // Remove any remaining inline styles from headings
+            heading.removeAttribute('style');
+            heading.removeAttribute('class');
+        });
+        
+        // Clean up list formatting
+        const lists = tempDiv.querySelectorAll('ul, ol');
+        lists.forEach(list => {
+            list.removeAttribute('style');
+            list.removeAttribute('class');
+            
+            // Ensure list items are properly structured
+            const listItems = list.querySelectorAll('li');
+            listItems.forEach(item => {
+                item.removeAttribute('style');
+                item.removeAttribute('class');
+            });
         });
         
         // Remove any changelog JSON content that might be embedded in the HTML
@@ -569,30 +678,83 @@ class ModernDocxExporter {
                         break;
                     case 'strong':
                     case 'b':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            bold: true 
-                        }));
+                        // Process nested formatting within bold text
+                        const boldChildren = this.processInlineElements(child);
+                        if (boldChildren.length > 0) {
+                            boldChildren.forEach(textRun => {
+                                textRun.bold = true;
+                            });
+                            children.push(...boldChildren);
+                        } else {
+                            children.push(new this.docx.TextRun({ 
+                                text: child.textContent, 
+                                bold: true 
+                            }));
+                        }
                         break;
                     case 'em':
                     case 'i':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            italics: true 
-                        }));
+                        // Process nested formatting within italic text
+                        const italicChildren = this.processInlineElements(child);
+                        if (italicChildren.length > 0) {
+                            italicChildren.forEach(textRun => {
+                                textRun.italics = true;
+                            });
+                            children.push(...italicChildren);
+                        } else {
+                            children.push(new this.docx.TextRun({ 
+                                text: child.textContent, 
+                                italics: true 
+                            }));
+                        }
                         break;
                     case 'u':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            underline: {} 
-                        }));
+                        // Process nested formatting within underlined text
+                        const underlineChildren = this.processInlineElements(child);
+                        if (underlineChildren.length > 0) {
+                            underlineChildren.forEach(textRun => {
+                                textRun.underline = {};
+                            });
+                            children.push(...underlineChildren);
+                        } else {
+                            children.push(new this.docx.TextRun({ 
+                                text: child.textContent, 
+                                underline: {} 
+                            }));
+                        }
+                        break;
+                    case 's':
+                    case 'strike':
+                        // Process strikethrough text
+                        const strikeChildren = this.processInlineElements(child);
+                        if (strikeChildren.length > 0) {
+                            strikeChildren.forEach(textRun => {
+                                textRun.strike = {};
+                            });
+                            children.push(...strikeChildren);
+                        } else {
+                            children.push(new this.docx.TextRun({ 
+                                text: child.textContent, 
+                                strike: {} 
+                            }));
+                        }
                         break;
                     case 'a':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            color: '0563C1',
-                            underline: { type: 'single' }
-                        }));
+                        // Process nested formatting within links
+                        const linkChildren = this.processInlineElements(child);
+                        if (linkChildren.length > 0) {
+                            linkChildren.forEach(textRun => {
+                                textRun.color = '0563C1';
+                                textRun.underline = { type: 'single' };
+                            });
+                            children.push(...linkChildren);
+                        } else {
+                            children.push(new this.docx.TextRun({ 
+                                text: child.textContent, 
+                                color: '0563C1',
+                                underline: { type: 'single' }
+                            }));
+                        }
                         break;
                     case 'code':
                         children.push(new this.docx.TextRun({ 
@@ -618,6 +780,66 @@ class ModernDocxExporter {
                             text: child.textContent, 
                             superScript: true
                         }));
+                        break;
+                    case 'span':
+                        // Handle span elements with specific styling
+                        const spanStyle = child.style || {};
+                        const fontWeight = spanStyle.fontWeight || spanStyle['font-weight'];
+                        const fontStyle = spanStyle.fontStyle || spanStyle['font-style'];
+                        const textDecoration = spanStyle.textDecoration || spanStyle['text-decoration'];
+                        const verticalAlign = spanStyle.verticalAlign || spanStyle['vertical-align'];
+                        
+                        // Process nested formatting within span
+                        const spanChildren = this.processInlineElements(child);
+                        
+                        if (spanChildren.length > 0) {
+                            spanChildren.forEach(textRun => {
+                                // Apply bold if font-weight is bold or 700+
+                                if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
+                                    textRun.bold = true;
+                                }
+                                // Apply italic if font-style is italic
+                                if (fontStyle === 'italic') {
+                                    textRun.italics = true;
+                                }
+                                // Apply underline if text-decoration contains underline
+                                if (textDecoration && textDecoration.includes('underline')) {
+                                    textRun.underline = {};
+                                }
+                                // Apply strikethrough if text-decoration contains line-through
+                                if (textDecoration && textDecoration.includes('line-through')) {
+                                    textRun.strike = {};
+                                }
+                                // Apply superscript/subscript based on vertical-align
+                                if (verticalAlign === 'super') {
+                                    textRun.superScript = true;
+                                } else if (verticalAlign === 'sub') {
+                                    textRun.subScript = true;
+                                }
+                            });
+                            children.push(...spanChildren);
+                        } else {
+                            // Create text run with span styling
+                            const textRun = new this.docx.TextRun({ text: child.textContent });
+                            if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
+                                textRun.bold = true;
+                            }
+                            if (fontStyle === 'italic') {
+                                textRun.italics = true;
+                            }
+                            if (textDecoration && textDecoration.includes('underline')) {
+                                textRun.underline = {};
+                            }
+                            if (textDecoration && textDecoration.includes('line-through')) {
+                                textRun.strike = {};
+                            }
+                            if (verticalAlign === 'super') {
+                                textRun.superScript = true;
+                            } else if (verticalAlign === 'sub') {
+                                textRun.subScript = true;
+                            }
+                            children.push(textRun);
+                        }
                         break;
                     default:
                         // Recursively process other inline elements
@@ -650,185 +872,210 @@ class ModernDocxExporter {
 
     processList(listElement, elements) {
         const isOrdered = listElement.tagName.toLowerCase() === 'ol';
-        const listItems = listElement.querySelectorAll('li');
         
-        listItems.forEach((item, index) => {
+        Array.from(listElement.children).forEach((item, index) => {
+            // Process list item content with formatting
             const children = this.processInlineElements(item);
+            
             if (children.length > 0) {
-                const listItem = new this.docx.Paragraph({
-                    children: children,
+                // Create bullet or number prefix
+                const prefix = isOrdered ? `${index + 1}. ` : '• ';
+                const prefixRun = new this.docx.TextRun({ text: prefix, bold: true });
+                
+                // Combine prefix with content
+                const allChildren = [prefixRun, ...children];
+                
+                const paragraph = new this.docx.Paragraph({
+                    children: allChildren,
                     spacing: { after: 100 },
-                    numbering: {
-                        type: isOrdered ? this.docx.NumberFormatType.DECIMAL : this.docx.NumberFormatType.BULLET,
-                        level: 0
-                    }
+                    indent: { left: 576 } // 576 twips = 0.4 inches (four spaces)
                 });
-                elements.push(listItem);
+                
+                elements.push(paragraph);
             }
         });
     }
 
     processTable(tableElement, elements) {
-        const rows = tableElement.querySelectorAll('tr');
-        const tableRows = [];
+        const rows = [];
         
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td, th');
-            const tableRowChildren = [];
+        // Process table rows (tr elements)
+        const tableRows = tableElement.querySelectorAll('tr');
+        
+        tableRows.forEach((rowElement, rowIndex) => {
+            const cells = [];
             
-            cells.forEach(cell => {
-                // Process all content in the cell, including images
-                const cellContent = [];
-                this.processNode(cell, cellContent);
+            // Process table cells (td/th elements) in this row
+            const tableCells = rowElement.querySelectorAll('td, th');
+            
+            tableCells.forEach((cellElement, cellIndex) => {
+                // Check for cell merging (colspan and rowspan)
+                const colspan = parseInt(cellElement.getAttribute('colspan')) || 1;
+                const rowspan = parseInt(cellElement.getAttribute('rowspan')) || 1;
                 
-                // Get cell styling
-                const cellStyle = this.getCellStyling(cell);
+                // Skip cells that are part of a colspan (they'll be handled by the main cell)
+                if (cellElement.hasAttribute('data-colspan-skip')) {
+                    return;
+                }
                 
-                // Create table cell with proper styling and content
-                const tableCell = new this.docx.TableCell({
-                    children: cellContent.length > 0 ? cellContent : [new this.docx.Paragraph({ text: ' ' })],
-                    width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
-                    margins: {
-                        top: 100,
-                        bottom: 100,
-                        left: 100,
-                        right: 100
-                    },
-                    verticalAlign: cellStyle.verticalAlign
+                // Process cell content with formatting
+                const children = this.processInlineElements(cellElement);
+                
+                // Extract background color from style - try multiple approaches
+                const style = cellElement.getAttribute('style') || '';
+                
+                // Try different color extraction patterns
+                let bgColor = 'FFFFFF'; // default white
+                
+                // Pattern 1: background-color: #RRGGBB
+                let bgColorMatch = style.match(/background-color:\s*(#[0-9a-fA-F]{6})/i);
+                if (bgColorMatch) {
+                    bgColor = bgColorMatch[1];
+                } else {
+                    // Pattern 2: background-color: #RGB
+                    bgColorMatch = style.match(/background-color:\s*(#[0-9a-fA-F]{3})/i);
+                    if (bgColorMatch) {
+                        bgColor = bgColorMatch[1];
+                    } else {
+                        // Pattern 3: background-color: rgb(r, g, b)
+                        bgColorMatch = style.match(/background-color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+                        if (bgColorMatch) {
+                            const r = parseInt(bgColorMatch[1]).toString(16).padStart(2, '0');
+                            const g = parseInt(bgColorMatch[2]).toString(16).padStart(2, '0');
+                            const b = parseInt(bgColorMatch[3]).toString(16).padStart(2, '0');
+                            bgColor = `#${r}${g}${b}`;
+                        } else {
+                            // Pattern 4: background: #RRGGBB
+                            bgColorMatch = style.match(/background:\s*(#[0-9a-fA-F]{6})/i);
+                            if (bgColorMatch) {
+                                bgColor = bgColorMatch[1];
+                            } else {
+                                // Pattern 5: background: #RGB
+                                bgColorMatch = style.match(/background:\s*(#[0-9a-fA-F]{3})/i);
+                                if (bgColorMatch) {
+                                    bgColor = bgColorMatch[1];
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Create normal paragraph (no shading on paragraph)
+                const paragraph = new this.docx.Paragraph({
+                    children: children.length > 0 ? children : [new this.docx.TextRun({ text: cellElement.textContent })]
                 });
                 
-                // Apply shading if available
-                if (cellStyle.shading) {
-                    tableCell.shading = cellStyle.shading;
+                // Create table cell with shading on the CELL itself
+                let tableCell;
+                
+                // Base cell properties
+                const cellProperties = {
+                    children: [paragraph]
+                };
+                
+                // Add colspan if greater than 1
+                if (colspan > 1) {
+                    cellProperties.columnSpan = colspan;
                 }
-                tableRowChildren.push(tableCell);
+                
+                // Add rowspan if greater than 1
+                if (rowspan > 1) {
+                    cellProperties.rowSpan = rowspan;
+                }
+                
+                // Add shading if color exists
+                if (bgColor !== 'FFFFFF') {
+                    cellProperties.shading = {
+                        fill: bgColor.replace('#', ''),
+                        val: 'solid'
+                    };
+                }
+                
+                tableCell = new this.docx.TableCell(cellProperties);
+                cells.push(tableCell);
             });
             
-            const tableRow = new this.docx.TableRow({
-                children: tableRowChildren
-            });
-            tableRows.push(tableRow);
+            rows.push(new this.docx.TableRow({ children: cells }));
         });
         
-        if (tableRows.length > 0) {
-            const table = new this.docx.Table({
-                rows: tableRows,
-                width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
-                borders: {
-                    top: { style: this.docx.BorderStyle.SINGLE, size: 1 },
-                    bottom: { style: this.docx.BorderStyle.SINGLE, size: 1 },
-                    left: { style: this.docx.BorderStyle.SINGLE, size: 1 },
-                    right: { style: this.docx.BorderStyle.SINGLE, size: 1 },
-                    insideHorizontal: { style: this.docx.BorderStyle.SINGLE, size: 1 },
-                    insideVertical: { style: this.docx.BorderStyle.SINGLE, size: 1 }
+        // Extract table width from HTML
+        const tableStyle = tableElement.getAttribute('style') || '';
+        let tableWidth = 100; // default percentage
+        let widthType = this.docx.WidthType.PERCENTAGE;
+        
+        // Try to extract width from style
+        const widthMatch = tableStyle.match(/width:\s*([^;]+)/);
+        if (widthMatch) {
+            const widthValue = widthMatch[1].trim();
+            
+            if (widthValue.includes('%')) {
+                tableWidth = parseFloat(widthValue.replace('%', ''));
+                widthType = this.docx.WidthType.PERCENTAGE;
+            } else if (widthValue.includes('px')) {
+                tableWidth = parseFloat(widthValue.replace('px', ''));
+                widthType = this.docx.WidthType.DXA; // Convert to twips later if needed
+            }
+        }
+        
+        // Force a wider table if no specific width found
+        if (tableWidth < 80) {
+            tableWidth = 100;
+            widthType = this.docx.WidthType.PERCENTAGE;
+        }
+        
+        // Extract column widths from colgroup/col elements
+        let columnWidths = [];
+        const colgroup = tableElement.querySelector('colgroup');
+        if (colgroup) {
+            const cols = colgroup.querySelectorAll('col');
+            
+            cols.forEach((col, index) => {
+                const colStyle = col.getAttribute('style') || '';
+                const widthMatch = colStyle.match(/width:\s*([^;]+)/);
+                if (widthMatch) {
+                    const widthValue = widthMatch[1].trim();
+                    if (widthValue.includes('%')) {
+                        const width = parseFloat(widthValue.replace('%', ''));
+                        columnWidths.push(width);
+                    } else {
+                        // Default to equal width if no percentage
+                        columnWidths.push(100 / cols.length);
+                    }
+                } else {
+                    // Default to equal width if no style
+                    columnWidths.push(100 / cols.length);
                 }
             });
-            elements.push(table);
+        } else {
+            // No colgroup found, calculate based on actual cells
+            let maxColumns = 1;
+            if (rows && rows.length > 0) {
+                maxColumns = Math.max(...rows.map(row => row.children ? row.children.length : 1));
+            }
+            columnWidths = Array(maxColumns).fill(100 / maxColumns);
+        }
+        
+        // Only create table if we have rows
+        if (rows && rows.length > 0) {
+            elements.push(new this.docx.Table({ 
+                rows: rows,
+                width: {
+                    size: tableWidth,
+                    type: widthType
+                },
+                columnWidths: columnWidths,
+                layout: this.docx.TableLayoutType.FIXED,
+                margins: {
+                    top: 100,
+                    bottom: 100,
+                    left: 100,
+                    right: 100
+                }
+            }));
         }
     }
 
-    getCellStyling(cell) {
-        const style = cell.getAttribute('style') || '';
-        const className = cell.className || '';
-        const isHeader = cell.tagName.toLowerCase() === 'th';
-        
-        let shading = undefined;
-        let verticalAlign = this.docx.VerticalAlign.TOP;
-        
-        // Check if cell has any child elements with background colors
-        const cellChildren = cell.querySelectorAll('*');
-        
-        // Look for background colors in child elements (TinyMCE might apply colors to content)
-        for (let child of cellChildren) {
-            const childStyle = child.getAttribute('style') || '';
-            const childComputedStyle = window.getComputedStyle(child);
-            const childBgColor = childComputedStyle.backgroundColor;
-            
-            if (childStyle.includes('background-color:')) {
-                const bgMatch = childStyle.match(/background-color:\s*([^;]+)/);
-                if (bgMatch) {
-                    const color = this.convertColorToHex(bgMatch[1].trim());
-                    if (color) {
-                        shading = { fill: color };
-                        break;
-                    }
-                }
-            } else if (childBgColor && childBgColor !== 'rgba(0, 0, 0, 0)' && childBgColor !== 'transparent') {
-                const color = this.convertColorToHex(childBgColor);
-                if (color) {
-                    shading = { fill: color };
-                    break;
-                }
-            }
-        }
-        
-        // Handle background colors from inline styles on the cell itself
-        if (!shading && style.includes('background-color:')) {
-            const bgMatch = style.match(/background-color:\s*([^;]+)/);
-            if (bgMatch) {
-                const color = this.convertColorToHex(bgMatch[1].trim());
-                if (color) {
-                    shading = { fill: color };
-                }
-            }
-        }
-        
-        // Check computed styles as fallback
-        if (!shading) {
-            const computedStyle = window.getComputedStyle(cell);
-            const bgColor = computedStyle.backgroundColor;
-            
-            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                const color = this.convertColorToHex(bgColor);
-                if (color) {
-                    shading = { fill: color };
-                }
-            }
-        }
-        
-        // Check for TinyMCE-specific background color attributes
-        if (!shading) {
-            const bgColorAttr = cell.getAttribute('bgcolor');
-            if (bgColorAttr) {
-                const color = this.convertColorToHex(bgColorAttr);
-                if (color) {
-                    shading = { fill: color };
-                }
-            }
-        }
-        
-        // Check for data attributes that TinyMCE might use
-        if (!shading) {
-            const dataBgColor = cell.getAttribute('data-mce-bgcolor') || cell.getAttribute('data-bgcolor');
-            if (dataBgColor) {
-                const color = this.convertColorToHex(dataBgColor);
-                if (color) {
-                    shading = { fill: color };
-                }
-            }
-        }
-        
-        // Handle header styling (yellow background for headers)
-        if (isHeader && !shading) {
-            shading = { fill: 'FFFF00' }; // Yellow for headers
-        }
-        
-        // Handle vertical alignment
-        if (style.includes('vertical-align: middle') || style.includes('vertical-align:middle')) {
-            verticalAlign = this.docx.VerticalAlign.CENTER;
-        } else if (style.includes('vertical-align: bottom') || style.includes('vertical-align:bottom')) {
-            verticalAlign = this.docx.VerticalAlign.BOTTOM;
-        }
-        
-        // Handle common CSS classes
-        if (className.includes('header') || className.includes('th')) {
-            if (!shading) {
-                shading = { fill: 'FFFF00' }; // Yellow for headers
-            }
-        }
-        
-        return { shading, verticalAlign };
-    }
+
 
     convertColorToHex(color) {
         // Handle named colors
