@@ -245,5 +245,6 @@ ByteDraft uses the following open-source licenses:
 
 ---
 
-**ByteDraft** - Professional documentation made simple  
+**ByteDraft** - Professional documentation made simple 
+**Version** 0.0.35 
 © 2025 - Built for offline productivity 
