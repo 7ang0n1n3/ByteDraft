@@ -251,61 +251,63 @@ class ModernDocxExporter {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         
+
+        
         // Convert TinyMCE's complex styling to simpler HTML structure
         // TinyMCE often uses spans with complex styling, we need to convert these to semantic HTML
         
-        // Convert spans with font-weight: bold to <strong> tags
-        const boldSpans = tempDiv.querySelectorAll('span[style*="font-weight: bold"], span[style*="font-weight:bold"], span[style*="font-weight: 700"], span[style*="font-weight:700"]');
-        boldSpans.forEach(span => {
-            const strong = document.createElement('strong');
-            strong.innerHTML = span.innerHTML;
-            span.parentNode.replaceChild(strong, span);
-        });
+        // Note: Span conversion is now handled in the comprehensive span processing below
         
-        // Convert spans with font-style: italic to <em> tags
-        const italicSpans = tempDiv.querySelectorAll('span[style*="font-style: italic"], span[style*="font-style:italic"]');
-        italicSpans.forEach(span => {
-            const em = document.createElement('em');
-            em.innerHTML = span.innerHTML;
-            span.parentNode.replaceChild(em, span);
-        });
-        
-        // Convert spans with text-decoration: underline to <u> tags
-        const underlineSpans = tempDiv.querySelectorAll('span[style*="text-decoration: underline"], span[style*="text-decoration:underline"]');
-        underlineSpans.forEach(span => {
-            const u = document.createElement('u');
-            u.innerHTML = span.innerHTML;
-            span.parentNode.replaceChild(u, span);
-        });
-        
-        // Handle TinyMCE's specific styling patterns
+        // Handle TinyMCE's specific styling patterns - preserve spans and clean them
         const allSpans = tempDiv.querySelectorAll('span');
         allSpans.forEach(span => {
             const style = span.getAttribute('style') || '';
             const className = span.getAttribute('class') || '';
+            
+
             
             // Skip spans that have background colors - preserve them for table processing
             if (style.includes('background-color') || style.includes('background:')) {
                 return; // Don't convert spans with background colors
             }
             
-            // Check for bold styling in various formats
-            if (style.includes('font-weight') || className.includes('bold') || className.includes('strong')) {
-                const strong = document.createElement('strong');
-                strong.innerHTML = span.innerHTML;
-                span.parentNode.replaceChild(strong, span);
+            // Clean up the span style, preserving only essential formatting
+            let cleanStyle = '';
+            
+            // Preserve font-size
+            const fontSizeMatch = style.match(/font-size\s*:\s*[^;]+;?/);
+            if (fontSizeMatch) {
+                cleanStyle += fontSizeMatch[0].trim() + ' ';
             }
-            // Check for italic styling
-            else if (style.includes('font-style') || className.includes('italic') || className.includes('em')) {
-                const em = document.createElement('em');
-                em.innerHTML = span.innerHTML;
-                span.parentNode.replaceChild(em, span);
+            
+            // Preserve font-weight
+            const fontWeightMatch = style.match(/font-weight\s*:\s*[^;]+;?/);
+            if (fontWeightMatch) {
+                cleanStyle += fontWeightMatch[0].trim() + ' ';
             }
-            // Check for underline styling
-            else if (style.includes('text-decoration') || className.includes('underline') || className.includes('u')) {
-                const u = document.createElement('u');
-                u.innerHTML = span.innerHTML;
-                span.parentNode.replaceChild(u, span);
+            
+            // Preserve font-style
+            const fontStyleMatch = style.match(/font-style\s*:\s*[^;]+;?/);
+            if (fontStyleMatch) {
+                cleanStyle += fontStyleMatch[0].trim() + ' ';
+            }
+            
+            // Preserve text-decoration
+            const textDecorationMatch = style.match(/text-decoration\s*:\s*[^;]+;?/);
+            if (textDecorationMatch) {
+                cleanStyle += textDecorationMatch[0].trim() + ' ';
+            }
+            
+            // Update the span style
+            if (cleanStyle.trim()) {
+                span.setAttribute('style', cleanStyle.trim());
+            } else {
+                span.removeAttribute('style');
+            }
+            
+            // Remove class attribute as it might interfere
+            if (className) {
+                span.removeAttribute('class');
             }
         });
         
@@ -373,14 +375,13 @@ class ModernDocxExporter {
                         el.removeAttribute('style');
                     }
                 } else {
-                    // For non-table cells, remove background colors too
+                    // For non-table cells, preserve font-size but remove other styles
                     const cleanStyle = style
                         .replace(/color\s*:\s*[^;]+;?/g, '')
                         .replace(/background[^;]*;?/g, '')
                         .replace(/margin[^;]*;?/g, '')
                         .replace(/padding[^;]*;?/g, '')
                         .replace(/font-family[^;]*;?/g, '')
-                        .replace(/font-size[^;]*;?/g, '')
                         .trim();
                     
                     if (cleanStyle) {
@@ -442,6 +443,8 @@ class ModernDocxExporter {
                 }
             });
         }
+        
+
         
         return tempDiv.innerHTML;
     }
@@ -545,6 +548,16 @@ class ModernDocxExporter {
                                     paragraph.alignment = textAlign;
                                 }
                                 
+                                // Handle font size from paragraph style
+                                const paragraphStyle = node.style || {};
+                                const fontSize = paragraphStyle.fontSize || paragraphStyle['font-size'];
+                                if (fontSize && children.length === 1 && children[0] instanceof this.docx.TextRun) {
+                                    const size = this.parseFontSize(fontSize);
+                                    if (size) {
+                                        children[0].size = size;
+                                    }
+                                }
+                                
                                 elements.push(paragraph);
                             }
                         }
@@ -561,6 +574,16 @@ class ModernDocxExporter {
                             const textAlign = this.getTextAlignment(node);
                             if (textAlign) {
                                 paragraph.alignment = textAlign;
+                            }
+                            
+                            // Handle font size from paragraph style
+                            const paragraphStyle = node.style || {};
+                            const fontSize = paragraphStyle.fontSize || paragraphStyle['font-size'];
+                            if (fontSize && children.length === 1 && children[0] instanceof this.docx.TextRun) {
+                                const size = this.parseFontSize(fontSize);
+                                if (size) {
+                                    children[0].size = size;
+                                }
                             }
                             
                             elements.push(paragraph);
@@ -730,65 +753,107 @@ class ModernDocxExporter {
                         break;
                     case 'strong':
                     case 'b':
-                        // Process nested formatting within bold text
-                        const boldChildren = this.processInlineElements(child);
-                        if (boldChildren.length > 0) {
-                            boldChildren.forEach(textRun => {
-                                textRun.bold = true;
-                            });
-                            children.push(...boldChildren);
-                        } else {
-                            children.push(new this.docx.TextRun({ 
-                                text: child.textContent, 
+                        // Extract text content and any font-size from child elements
+                        let textContent = child.textContent || child.innerText || '';
+                        let childFontSize = null;
+                        
+                        // Look for font-size in child elements
+                        Array.from(child.childNodes).forEach(grandChild => {
+                            if (grandChild.nodeType === Node.ELEMENT_NODE && grandChild.tagName.toLowerCase() === 'span') {
+                                const spanStyle = grandChild.style || {};
+                                const fontSize = spanStyle.fontSize || spanStyle['font-size'];
+                                if (fontSize) {
+                                    childFontSize = fontSize;
+                                }
+                            }
+                        });
+                        
+                        if (textContent.trim()) {
+                            const textRun = new this.docx.TextRun({ 
+                                text: textContent.trim(), 
                                 bold: true 
-                            }));
+                            });
+                            
+                            // Apply font size if found in child elements
+                            if (childFontSize) {
+                                const size = this.parseFontSize(childFontSize);
+                                if (size) {
+                                    textRun.size = size;
+                                }
+                            }
+                            
+                            children.push(textRun);
                         }
                         break;
                     case 'em':
                     case 'i':
-                        // Process nested formatting within italic text
-                        const italicChildren = this.processInlineElements(child);
-                        if (italicChildren.length > 0) {
-                            italicChildren.forEach(textRun => {
-                                textRun.italics = true;
+                        // Process italic text according to DOCX.js documentation
+                        const italicTextContent = child.textContent || child.innerText || '';
+                        if (italicTextContent.trim()) {
+                            const textRun = new this.docx.TextRun({ 
+                                text: italicTextContent.trim(), 
+                                italics: true // Boolean true for italics as per DOCX.js docs
                             });
-                            children.push(...italicChildren);
-                        } else {
-                            children.push(new this.docx.TextRun({ 
-                                text: child.textContent, 
-                                italics: true 
-                            }));
+                            
+                            // Apply font size if specified
+                            const emStyle = child.style || {};
+                            const fontSize = emStyle.fontSize || emStyle['font-size'];
+                            if (fontSize) {
+                                const size = this.parseFontSize(fontSize);
+                                if (size) {
+                                    textRun.size = size;
+                                }
+                            }
+                            
+                            children.push(textRun);
                         }
                         break;
                     case 'u':
-                        // Process nested formatting within underlined text
-                        const underlineChildren = this.processInlineElements(child);
-                        if (underlineChildren.length > 0) {
-                            underlineChildren.forEach(textRun => {
-                                textRun.underline = {};
+                        // Process underlined text according to DOCX.js documentation
+                        const underlineTextContent = child.textContent || child.innerText || '';
+                        if (underlineTextContent.trim()) {
+                            const textRun = new this.docx.TextRun({ 
+                                text: underlineTextContent.trim(), 
+                                underline: {
+                                    type: "single",
+                                    color: "000000",
+                                }
                             });
-                            children.push(...underlineChildren);
-                        } else {
-                            children.push(new this.docx.TextRun({ 
-                                text: child.textContent, 
-                                underline: {} 
-                            }));
+                            
+                            // Apply font size if specified
+                            const uStyle = child.style || {};
+                            const fontSize = uStyle.fontSize || uStyle['font-size'];
+                            if (fontSize) {
+                                const size = this.parseFontSize(fontSize);
+                                if (size) {
+                                    textRun.size = size;
+                                }
+                            }
+                            
+                            children.push(textRun);
                         }
                         break;
                     case 's':
                     case 'strike':
-                        // Process strikethrough text
-                        const strikeChildren = this.processInlineElements(child);
-                        if (strikeChildren.length > 0) {
-                            strikeChildren.forEach(textRun => {
-                                textRun.strike = {};
+                        // Process strikethrough text according to DOCX.js documentation
+                        const strikeTextContent = child.textContent || child.innerText || '';
+                        if (strikeTextContent.trim()) {
+                            const textRun = new this.docx.TextRun({ 
+                                text: strikeTextContent.trim(), 
+                                strike: { type: 'singleStrike', color: '000000' } // Use string value instead of enum
                             });
-                            children.push(...strikeChildren);
-                        } else {
-                            children.push(new this.docx.TextRun({ 
-                                text: child.textContent, 
-                                strike: {} 
-                            }));
+                            
+                            // Apply font size if specified
+                            const sStyle = child.style || {};
+                            const fontSize = sStyle.fontSize || sStyle['font-size'];
+                            if (fontSize) {
+                                const size = this.parseFontSize(fontSize);
+                                if (size) {
+                                    textRun.size = size;
+                                }
+                            }
+                            
+                            children.push(textRun);
                         }
                         break;
                     case 'a':
@@ -801,11 +866,15 @@ class ModernDocxExporter {
                             });
                             children.push(...linkChildren);
                         } else {
-                            children.push(new this.docx.TextRun({ 
-                                text: child.textContent, 
-                                color: '0563C1',
-                                underline: { type: 'single' }
-                            }));
+                            // If no children were processed, create a text run from the text content
+                            const textContent = child.textContent || child.innerText || '';
+                            if (textContent.trim()) {
+                                children.push(new this.docx.TextRun({ 
+                                    text: textContent, 
+                                    color: '0563C1',
+                                    underline: { type: 'single' }
+                                }));
+                            }
                         }
                         break;
                     case 'code':
@@ -833,6 +902,18 @@ class ModernDocxExporter {
                             superScript: true
                         }));
                         break;
+                    case 'small':
+                        children.push(new this.docx.TextRun({ 
+                            text: child.textContent, 
+                            size: 16 // Smaller font size
+                        }));
+                        break;
+                    case 'big':
+                        children.push(new this.docx.TextRun({ 
+                            text: child.textContent, 
+                            size: 28 // Larger font size
+                        }));
+                        break;
                     case 'span':
                         // Handle span elements with specific styling
                         const spanStyle = child.style || {};
@@ -840,6 +921,7 @@ class ModernDocxExporter {
                         const fontStyle = spanStyle.fontStyle || spanStyle['font-style'];
                         const textDecoration = spanStyle.textDecoration || spanStyle['text-decoration'];
                         const verticalAlign = spanStyle.verticalAlign || spanStyle['vertical-align'];
+                        const fontSize = spanStyle.fontSize || spanStyle['font-size'];
                         
                         // Process nested formatting within span
                         const spanChildren = this.processInlineElements(child);
@@ -856,11 +938,14 @@ class ModernDocxExporter {
                                 }
                                 // Apply underline if text-decoration contains underline
                                 if (textDecoration && textDecoration.includes('underline')) {
-                                    textRun.underline = {};
+                                    textRun.underline = {
+                                        type: "single",
+                                        color: "000000",
+                                    };
                                 }
                                 // Apply strikethrough if text-decoration contains line-through
                                 if (textDecoration && textDecoration.includes('line-through')) {
-                                    textRun.strike = {};
+                                    textRun.strike = { type: 'singleStrike', color: '000000' };
                                 }
                                 // Apply superscript/subscript based on vertical-align
                                 if (verticalAlign === 'super') {
@@ -868,29 +953,49 @@ class ModernDocxExporter {
                                 } else if (verticalAlign === 'sub') {
                                     textRun.subScript = true;
                                 }
+                                // Apply font size if specified
+                                if (fontSize) {
+                                    const size = this.parseFontSize(fontSize);
+                                    if (size) {
+                                        textRun.size = size;
+                                    }
+                                }
                             });
                             children.push(...spanChildren);
                         } else {
                             // Create text run with span styling
-                            const textRun = new this.docx.TextRun({ text: child.textContent });
-                            if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
-                                textRun.bold = true;
+                            const textContent = child.textContent || child.innerText || '';
+                            if (textContent.trim()) {
+                                const textRun = new this.docx.TextRun({ text: textContent });
+                                if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
+                                    textRun.bold = true;
+                                }
+                                if (fontStyle === 'italic') {
+                                    textRun.italics = true;
+                                }
+                                if (textDecoration && textDecoration.includes('underline')) {
+                                    textRun.underline = {
+                                        type: "single",
+                                        color: "000000",
+                                    };
+                                }
+                                if (textDecoration && textDecoration.includes('line-through')) {
+                                    textRun.strike = { type: 'singleStrike', color: '000000' };
+                                }
+                                if (verticalAlign === 'super') {
+                                    textRun.superScript = true;
+                                } else if (verticalAlign === 'sub') {
+                                    textRun.subScript = true;
+                                }
+                                // Apply font size if specified
+                                if (fontSize) {
+                                    const size = this.parseFontSize(fontSize);
+                                    if (size) {
+                                        textRun.size = size;
+                                    }
+                                }
+                                children.push(textRun);
                             }
-                            if (fontStyle === 'italic') {
-                                textRun.italics = true;
-                            }
-                            if (textDecoration && textDecoration.includes('underline')) {
-                                textRun.underline = {};
-                            }
-                            if (textDecoration && textDecoration.includes('line-through')) {
-                                textRun.strike = {};
-                            }
-                            if (verticalAlign === 'super') {
-                                textRun.superScript = true;
-                            } else if (verticalAlign === 'sub') {
-                                textRun.subScript = true;
-                            }
-                            children.push(textRun);
                         }
                         break;
                     default:
@@ -1375,6 +1480,72 @@ class ModernDocxExporter {
             if (color.includes('hsl(0, 0%, 100%)')) return 'FFFFFF'; // white
             if (color.includes('hsl(0, 0%, 50%)')) return '808080'; // gray
             // Add more HSL conversions as needed
+        }
+        
+        return undefined;
+    }
+
+    parseFontSize(fontSize) {
+        console.log('parseFontSize called with:', fontSize);
+        // Remove spaces and convert to lowercase
+        fontSize = fontSize.toLowerCase().replace(/\s/g, '');
+        console.log('Cleaned font size:', fontSize);
+        
+        // Handle pixel values (px)
+        if (fontSize.endsWith('px')) {
+            const size = parseInt(fontSize);
+            console.log('Parsed px size:', size);
+            if (!isNaN(size)) {
+                // Convert pixels to half-points (1px = 1pt = 2 half-points)
+                const result = Math.round(size * 2);
+                console.log('Converted px to half-points:', result);
+                return result;
+            }
+        }
+        
+        // Handle point values (pt)
+        if (fontSize.endsWith('pt')) {
+            const size = parseInt(fontSize);
+            console.log('Parsed pt size:', size);
+            if (!isNaN(size)) {
+                // Convert points to half-points (1pt = 2 half-points)
+                const result = size * 2;
+                console.log('Converted pt to half-points:', result);
+                return result;
+            }
+        }
+        
+        // Handle em values (em)
+        if (fontSize.endsWith('em')) {
+            const size = parseFloat(fontSize);
+            if (!isNaN(size)) {
+                // Convert em to half-points (1em = 12pt = 24 half-points)
+                return Math.round(size * 12 * 2);
+            }
+        }
+        
+        // Handle rem values (rem)
+        if (fontSize.endsWith('rem')) {
+            const size = parseFloat(fontSize);
+            if (!isNaN(size)) {
+                // Convert rem to half-points (1rem = 16pt = 32 half-points)
+                return Math.round(size * 16 * 2);
+            }
+        }
+        
+        // Handle percentage values (%)
+        if (fontSize.endsWith('%')) {
+            const size = parseFloat(fontSize);
+            if (!isNaN(size)) {
+                // Convert percentage to half-points (100% = 12pt = 24 half-points)
+                return Math.round((size / 100) * 12 * 2);
+            }
+        }
+        
+        // Handle numeric values (assume pixels)
+        const size = parseInt(fontSize);
+        if (!isNaN(size)) {
+            return Math.round(size * 0.75 * 2);
         }
         
         return undefined;
