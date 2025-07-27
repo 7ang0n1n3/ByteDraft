@@ -742,6 +742,169 @@ body {
 }
 
 /* ==========================================================================
+   Dark Theme Changelog Modal Specific Overrides
+   ========================================================================== */
+
+/* Dark theme changelog table header - use a darker blue */
+[data-theme="dark"] .table-primary {
+    background-color: #1e3a8a !important; /* Darker blue for dark theme */
+    color: white !important;
+}
+
+[data-theme="dark"] .table-primary th {
+    background-color: #1e3a8a !important; /* Darker blue for dark theme */
+    color: white !important;
+}
+
+/* Dark theme input fields in changelog table */
+[data-theme="dark"] .table input[type="text"],
+[data-theme="dark"] .table input[type="date"],
+[data-theme="dark"] .table input[type="number"] {
+    background-color: var(--surface-color) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .table input[type="text"]:focus,
+[data-theme="dark"] .table input[type="date"]:focus,
+[data-theme="dark"] .table input[type="number"]:focus {
+    background-color: var(--surface-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Dark theme form controls in modals */
+[data-theme="dark"] .modal input[type="text"],
+[data-theme="dark"] .modal input[type="date"],
+[data-theme="dark"] .modal input[type="number"],
+[data-theme="dark"] .modal textarea {
+    background-color: var(--surface-color) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+[data-theme="dark"] .modal input[type="text"]:focus,
+[data-theme="dark"] .modal input[type="date"]:focus,
+[data-theme="dark"] .modal input[type="number"]:focus,
+[data-theme="dark"] .modal textarea:focus {
+    background-color: var(--surface-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-color) !important;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25) !important;
+}
+
+/* Dark theme delete button in changelog table */
+[data-theme="dark"] .table .btn-outline-danger,
+[data-theme="dark"] .table .btn-danger {
+    background-color: transparent !important;
+    border-color: var(--danger-color) !important;
+    color: var(--danger-color) !important;
+}
+
+[data-theme="dark"] .table .btn-outline-danger:hover,
+[data-theme="dark"] .table .btn-danger:hover {
+    background-color: var(--danger-color) !important;
+    border-color: var(--danger-color) !important;
+    color: white !important;
+}
+
+/* Dark theme add row button */
+[data-theme="dark"] .btn-outline-success {
+    background-color: transparent !important;
+    border-color: var(--success-color) !important;
+    color: var(--success-color) !important;
+}
+
+[data-theme="dark"] .btn-outline-success:hover {
+    background-color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+    color: white !important;
+}
+
+/* Dark theme save button */
+[data-theme="dark"] .btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background-color: #1d4ed8 !important; /* Slightly darker on hover */
+    border-color: #1d4ed8 !important;
+    color: white !important;
+}
+
+/* Dark theme cancel button */
+[data-theme="dark"] .btn-secondary {
+    background-color: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+    background-color: #5a6c7d !important; /* Slightly darker on hover */
+    border-color: #5a6c7d !important;
+    color: white !important;
+}
+
+/* Dark theme alert styling */
+[data-theme="dark"] .alert-info {
+    background-color: #1e3a8a !important; /* Darker blue for dark theme */
+    border-color: #3b82f6 !important;
+    color: white !important;
+}
+
+[data-theme="dark"] .alert-info .fas {
+    color: white !important;
+}
+
+/* Dark theme close button (X) in modals */
+[data-theme="dark"] .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+}
+
+/* Dark theme table borders */
+[data-theme="dark"] .table-bordered {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .table-bordered th,
+[data-theme="dark"] .table-bordered td {
+    border-color: var(--border-color) !important;
+}
+
+/* Dark theme table row backgrounds */
+[data-theme="dark"] .table tbody tr {
+    background-color: var(--surface-color) !important;
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+    background-color: var(--toc-hover) !important;
+}
+
+/* Dark theme table cell backgrounds */
+[data-theme="dark"] .table td {
+    background-color: var(--surface-color) !important;
+}
+
+/* Override any white backgrounds that might be applied */
+[data-theme="dark"] .table,
+[data-theme="dark"] .table tbody,
+[data-theme="dark"] .table tbody tr,
+[data-theme="dark"] .table tbody td {
+    background-color: var(--surface-color) !important;
+}
+
+/* Ensure table header uses the darker blue */
+[data-theme="dark"] .table-primary,
+[data-theme="dark"] .table-primary th,
+[data-theme="dark"] .table-primary td {
+    background-color: #1e3a8a !important; /* Darker blue for dark theme */
+    color: white !important;
+}
+
+/* ==========================================================================
    Dark Theme Text Alignment Overrides
    ========================================================================== */
 
