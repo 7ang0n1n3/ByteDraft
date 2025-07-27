@@ -37,10 +37,11 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
   - Properly numbered sections and subsections
 - **Advanced Table Export**: Preserves cell colors, borders, sizes, and formatting
 - **Image Preservation**: All images included in exported documents
-- **Formatting Retention**: Maintains all text formatting and structure
+- **Formatting Retention**: Maintains all text formatting and structure (bold, italic, font sizes)
 - **Professional Layout**: Proper headings, lists, tables, and styling
 - **Document Metadata**: Includes title page, version history, and changelog
-- **Custom Headers/Footers**: Support for `{{title}}` and `{{page}}` variables
+- **Custom Headers/Footers**: Support for `{{title}}` and `{{page}}` variables with table-based layout
+- **Multi-section Export**: Title page, changelog, and TOC without headers/footers; main content with custom headers/footers
 
 ### 🎨 **User Interface**
 - **Modern Design**: Clean, professional interface with Bootstrap 5
@@ -54,10 +55,11 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 ### 💾 **Data Management**
 - **Local Storage**: All data stored in your browser (no server required)
 - **Auto-save**: Automatic saving every 30 seconds
-- **Export/Import**: JSON export for backup and sharing
+- **Export/Import**: JSON export for backup and sharing with complete project data preservation
 - **Offline Operation**: Works completely without internet connection
 - **Document Information**: Custom document metadata fields
 - **Changelog Management**: Professional changelog with version tracking
+- **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 🚀 Getting Started
 
@@ -115,12 +117,14 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Professional Layout**: Information displayed in formatted table
 - **Export Integration**: All metadata included in DOCX exports
 - **Flexible Fields**: Add custom fields as needed
+- **Data Persistence**: All document info preserved in JSON exports and imports
 
 ### Changelog Management
 - **Professional Changelog**: Version tracking with approval workflow
 - **Custom Fields**: Version number, dates, author, reviewer, approver, description
 - **Export Integration**: Changelog appears as dedicated page in exports
-- **Data Persistence**: All changelog data stored locally
+- **Data Persistence**: All changelog data stored locally and preserved in JSON exports
+- **UI Integration**: Changelog data automatically loads on import without page refresh
 
 ### Document Templates
 - **Built-in Templates**: Technical documentation, user guides, API docs
@@ -133,18 +137,34 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Manual Saves**: Explicit saves are tracked separately
 - **Status Changes**: Document status updates are logged
 - **Export History**: Track when documents were exported
+- **Data Persistence**: Version history preserved in JSON exports and imports
+
+### Page Numbering Settings
+- **Configurable Parameters**: Adjust characters per line, lines per page, header height, and paragraph spacing
+- **Accurate Estimation**: Better page number calculations for TOC and document planning
+- **Professional Layout**: Optimized settings for different document types
+- **User Control**: Fine-tune page layout parameters for specific requirements
+
+### Enhanced JSON Import/Export
+- **Complete Data Preservation**: All project data including document info, changelog, headers/footers, and version history
+- **Automatic UI Refresh**: Imported data immediately available without page refresh
+- **Conflict Resolution**: Automatic handling of duplicate project names during import
+- **Data Validation**: Robust validation of imported JSON structure
+- **Seamless Integration**: Imported projects work exactly like native projects
 
 ### Custom Fields
 - **Project Metadata**: Add custom fields for project-specific information
 - **Flexible Structure**: Define field names and values as needed
 - **Export Inclusion**: Custom fields appear in exported documents
 - **Multiple Types**: Text, date, email, URL field types
+- **Data Persistence**: Custom fields preserved in JSON exports and imports
 
 ### Theme System
 - **Dark/Light Mode**: Toggle between themes with local storage persistence
 - **TinyMCE Integration**: Editor automatically adapts to theme changes
-- **Comprehensive Styling**: All UI components properly themed
+- **Comprehensive Styling**: All UI components properly themed with CSS custom properties
 - **Smooth Transitions**: Animated theme switching
+- **Modular CSS**: Well-organized styles with comprehensive documentation and logical sections
 
 ## 📋 Requirements
 
