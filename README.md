@@ -1,6 +1,6 @@
 # ByteDraft
 
-ByteDraft is a modern technical documentation tool for creating, editing, and exporting structured reports (DOCX) with advanced formatting, unlimited section depth, and a user-friendly interface. Built for offline use with professional-grade editing capabilities.
+ByteDraft is a modern technical documentation tool for creating, editing, and exporting structured reports (DOCX) with advanced formatting, unlimited section depth, and a user-friendly interface. Built for offline use with editing capabilities.
 
 ## ✨ Features
 
@@ -10,7 +10,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Typography Options**: Multiple font families and sizes (8pt to 48pt)
 - **Advanced Tools**: Search/replace, fullscreen mode, word count, character map
 - **Media Support**: Drag-and-drop image insertion with base64 storage
-- **Table Support**: Create and format tables with ease
+- **Table Support**: Create and format tables with ease, including cell colors and borders
 - **Code Blocks**: Syntax highlighting for code snippets with GitHub Dark theme
 
 ### 📚 **Document Structure**
@@ -31,14 +31,16 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 ### 📄 **Export Capabilities**
 - **Modern DOCX Export**: Uses the latest docx library for better compatibility
 - **Professional Document Structure**: 
-  - Title page with document information
+  - Title page with document information (36pt title, 18pt description)
   - Document changelog page with custom fields
-  - Auto-updating Table of Contents
+  - Auto-updating Table of Contents with "Click here to update" placeholder
   - Properly numbered sections and subsections
+- **Advanced Table Export**: Preserves cell colors, borders, sizes, and formatting
 - **Image Preservation**: All images included in exported documents
 - **Formatting Retention**: Maintains all text formatting and structure
 - **Professional Layout**: Proper headings, lists, tables, and styling
 - **Document Metadata**: Includes title page, version history, and changelog
+- **Custom Headers/Footers**: Support for `{{title}}` and `{{page}}` variables
 
 ### 🎨 **User Interface**
 - **Modern Design**: Clean, professional interface with Bootstrap 5
@@ -46,7 +48,8 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Project Management**: Organize multiple documentation projects
 - **Status Tracking**: Draft, Working, and Publish statuses
 - **Real-time Preview**: See changes reflected immediately
-- **Dark/Light Theme**: Toggle between themes for comfortable editing
+- **Dark/Light Theme**: Toggle between themes for comfortable editing with persistence
+- **Professional CSS Organization**: Well-structured styles with comprehensive documentation
 
 ### 💾 **Data Management**
 - **Local Storage**: All data stored in your browser (no server required)
@@ -76,7 +79,8 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 6. Add images by dragging them into the editor
 7. Set document information using "Edit Document Info"
 8. Add changelog entries using "Document Change Log"
-9. Export to DOCX when finished
+9. Configure headers/footers using "Edit Header/Footer"
+10. Export to DOCX when finished
 
 ## 🛠️ Advanced Features
 
@@ -91,6 +95,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Professional Formatting**: Proper indentation and formatting
 - **Update Instructions**: Clear guidance for users to update TOC in Word
 - **Heading Integration**: Automatically picks up all numbered headings
+
+### Advanced Table Export
+- **Cell Color Preservation**: Background colors maintained in DOCX export
+- **Border Styling**: Table borders, styles, and widths preserved
+- **Cell Alignment**: Text alignment within cells maintained
+- **Complex Formatting**: Nested content, images, and formatting preserved
+- **Size Control**: Table dimensions and positioning maintained
 
 ### Image Management
 - **Supported Formats**: PNG, JPEG, GIF, WebP
@@ -129,6 +140,12 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Export Inclusion**: Custom fields appear in exported documents
 - **Multiple Types**: Text, date, email, URL field types
 
+### Theme System
+- **Dark/Light Mode**: Toggle between themes with local storage persistence
+- **TinyMCE Integration**: Editor automatically adapts to theme changes
+- **Comprehensive Styling**: All UI components properly themed
+- **Smooth Transitions**: Animated theme switching
+
 ## 📋 Requirements
 
 ### Browser Compatibility
@@ -159,13 +176,23 @@ ByteDraft/
 ├── templates.js            # Document templates
 ├── modernDocxExport.js     # Modern DOCX export module
 ├── libs/                   # External libraries
+│   ├── css/               # CSS files
+│   │   ├── styles.css     # Main application styles
+│   │   └── github-dark.min.css # Code syntax highlighting theme
 │   ├── tinymce/           # TinyMCE editor
-│   ├── bootstrap/         # Bootstrap CSS/JS
+│   ├── bootstrap/         # Bootstrap JS
 │   ├── docx/              # DOCX generation library
 │   ├── fonts/             # Font Awesome icons
-│   └── github-dark.min.css # Code syntax highlighting theme
+│   └── highlight.min.js   # Code syntax highlighting
 └── README.md              # This file
 ```
+
+### CSS Organization
+- **Modular Structure**: Well-organized CSS with comprehensive comments
+- **Theme Variables**: CSS custom properties for easy theming
+- **Component-Based**: Logical sections for different UI components
+- **Dark Mode Support**: Extensive dark theme overrides
+- **Responsive Design**: Mobile-friendly adaptations
 
 ## 🎯 Use Cases
 
@@ -198,7 +225,7 @@ ByteDraft/
 
 ByteDraft is designed to be easily customizable and extensible:
 
-### Adding Templates
+### Customizing Templates
 Edit `templates.js` to add new document templates:
 ```javascript
 templates['my-template'] = {
@@ -211,7 +238,7 @@ templates['my-template'] = {
 ```
 
 ### Customizing Styles
-Modify the CSS in `index.html` to change the appearance:
+Modify the CSS in `libs/css/styles.css` to change the appearance:
 - Color schemes
 - Layout adjustments
 - Typography changes
@@ -224,27 +251,18 @@ The modular design allows easy addition of:
 - Custom field types
 - Enhanced templates
 
-## 📄 License
-
-ByteDraft uses the following open-source licenses:
-- **TinyMCE**: GPL v2 or commercial license
-- **Bootstrap**: MIT License
-- **Font Awesome**: MIT License
-- **docx**: MIT License
-- **JSZip**: MIT License
-- **highlight.js**: BSD License
 
 ## 🙏 Credits
 
-- **TinyMCE**: Professional rich text editing
-- **Bootstrap**: Modern UI components
-- **Font Awesome**: Beautiful icons
-- **docx**: Modern DOCX generation
-- **JSZip**: File compression utilities
-- **highlight.js**: Code syntax highlighting
+- **TinyMCE**: Professional rich text editing - GPL v2 or commercial license
+- **Bootstrap**: Modern UI components - MIT License
+- **Font Awesome**: Beautiful icons - MIT License
+- **docx**: Modern DOCX generation - MIT License
+- **JSZip**: File compression utilities - MIT License
+- **highlight.js**: Code syntax highlighting - BSD License
 
 ---
 
 **ByteDraft** - Professional documentation made simple 
-**Version** 0.0.36 
+**Version** 0.0.37 
 © 2025 - Built for offline productivity 
