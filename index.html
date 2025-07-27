@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="0.0.37">
+    <meta name="version" content="0.0.38">
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
@@ -1472,9 +1472,22 @@
                 return;
             }
 
+            // Get additional project data from localStorage
+            const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+            const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+
+            // Filter version history for this specific project
+            const projectVersionHistory = allVersionHistory.filter(v => v.projectId === projectId);
+
             // Create a clean copy of the project for export
             const exportData = {
                 ...project,
+                documentInfo: allDocInfo[projectId] || {},
+                customChangelog: allCustomChangelog[projectId] || {},
+                headerFooter: allHeaderFooter[projectId] || {},
+                versionHistory: projectVersionHistory,
                 exportedAt: new Date().toISOString(),
                 version: '1.0'
             };
@@ -1526,8 +1539,42 @@
                     delete importedProject.exportedAt;
                     delete importedProject.version;
 
+                    // Extract additional data before removing it from the project object
+                    const documentInfo = importedProject.documentInfo || {};
+                    const importedCustomChangelog = importedProject.customChangelog || {};
+                    const headerFooter = importedProject.headerFooter || {};
+                    const importedVersionHistory = importedProject.versionHistory || [];
+
+                    // Remove additional data from the project object
+                    delete importedProject.documentInfo;
+                    delete importedProject.customChangelog;
+                    delete importedProject.headerFooter;
+                    delete importedProject.versionHistory;
+
                     // Add to projects array
                     projects.push(importedProject);
+                    
+                    // Save additional data to localStorage
+                    const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+                    const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+                    const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+                    const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+
+                    allDocInfo[importedProject.id] = documentInfo;
+                    allCustomChangelog[importedProject.id] = importedCustomChangelog;
+                    allHeaderFooter[importedProject.id] = headerFooter;
+
+                    // Update version history entries with new project ID
+                    const updatedVersionHistory = importedVersionHistory.map(v => ({
+                        ...v,
+                        projectId: importedProject.id
+                    }));
+                    allVersionHistory.push(...updatedVersionHistory);
+
+                    localStorage.setItem('bytedraft_docinfo', JSON.stringify(allDocInfo));
+                    localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(allCustomChangelog));
+                    localStorage.setItem('bytedraft_header_footer', JSON.stringify(allHeaderFooter));
+                    localStorage.setItem('bytedraft_versions', JSON.stringify(allVersionHistory));
                     
                     // Save to localStorage
                     saveProjects();
@@ -1537,6 +1584,28 @@
                     
                     // Select the newly imported project
                     selectProject(importedProject.id);
+                    
+                    // Refresh the global variables to include the imported data
+                    customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+                    versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+                    
+                    // Update the document info display if the modal is open
+                    const docInfoModal = document.getElementById('documentInfoModal');
+                    if (docInfoModal && bootstrap.Modal.getInstance(docInfoModal) && bootstrap.Modal.getInstance(docInfoModal)._isShown) {
+                        loadDocumentInfo();
+                    }
+                    
+                    // Update the changelog display if the modal is open
+                    const changelogModal = document.getElementById('customChangelogModal');
+                    if (changelogModal && bootstrap.Modal.getInstance(changelogModal) && bootstrap.Modal.getInstance(changelogModal)._isShown) {
+                        renderChangelogTable();
+                    }
+                    
+                    // Update the version history display if the modal is open
+                    const versionHistoryModal = document.getElementById('versionHistoryModal');
+                    if (versionHistoryModal && bootstrap.Modal.getInstance(versionHistoryModal) && bootstrap.Modal.getInstance(versionHistoryModal)._isShown) {
+                        showVersionHistory();
+                    }
                     
                     alert(`Project "${importedProject.name}" imported successfully!`);
                     

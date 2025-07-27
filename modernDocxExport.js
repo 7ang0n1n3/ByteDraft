@@ -815,8 +815,8 @@ class ModernDocxExporter {
                             const textRun = new this.docx.TextRun({ 
                                 text: underlineTextContent.trim(), 
                                 underline: {
-                                    type: "single",
-                                    color: "000000",
+                                    type: this.docx.UnderlineType.SINGLE,
+                                    color: "000000"
                                 }
                             });
                             
@@ -840,7 +840,7 @@ class ModernDocxExporter {
                         if (strikeTextContent.trim()) {
                             const textRun = new this.docx.TextRun({ 
                                 text: strikeTextContent.trim(), 
-                                strike: { type: 'singleStrike', color: '000000' } // Use string value instead of enum
+                                strike: true
                             });
                             
                             // Apply font size if specified
@@ -914,14 +914,16 @@ class ModernDocxExporter {
                             size: 28 // Larger font size
                         }));
                         break;
-                    case 'span':
-                        // Handle span elements with specific styling
-                        const spanStyle = child.style || {};
-                        const fontWeight = spanStyle.fontWeight || spanStyle['font-weight'];
-                        const fontStyle = spanStyle.fontStyle || spanStyle['font-style'];
-                        const textDecoration = spanStyle.textDecoration || spanStyle['text-decoration'];
-                        const verticalAlign = spanStyle.verticalAlign || spanStyle['vertical-align'];
-                        const fontSize = spanStyle.fontSize || spanStyle['font-size'];
+                                            case 'span':
+                            // Handle span elements with specific styling
+                            const spanStyle = child.style || {};
+                            const fontWeight = spanStyle.fontWeight || spanStyle['font-weight'];
+                            const fontStyle = spanStyle.fontStyle || spanStyle['font-style'];
+                            const textDecoration = spanStyle.textDecoration || spanStyle['text-decoration'];
+                            const verticalAlign = spanStyle.verticalAlign || spanStyle['vertical-align'];
+                            const fontSize = spanStyle.fontSize || spanStyle['font-size'];
+                            
+
                         
                         // Process nested formatting within span
                         const spanChildren = this.processInlineElements(child);
@@ -939,13 +941,13 @@ class ModernDocxExporter {
                                 // Apply underline if text-decoration contains underline
                                 if (textDecoration && textDecoration.includes('underline')) {
                                     textRun.underline = {
-                                        type: "single",
-                                        color: "000000",
+                                        type: this.docx.UnderlineType.SINGLE,
+                                        color: "000000"
                                     };
                                 }
                                 // Apply strikethrough if text-decoration contains line-through
                                 if (textDecoration && textDecoration.includes('line-through')) {
-                                    textRun.strike = { type: 'singleStrike', color: '000000' };
+                                    textRun.strike = true;
                                 }
                                 // Apply superscript/subscript based on vertical-align
                                 if (verticalAlign === 'super') {
@@ -975,12 +977,12 @@ class ModernDocxExporter {
                                 }
                                 if (textDecoration && textDecoration.includes('underline')) {
                                     textRun.underline = {
-                                        type: "single",
-                                        color: "000000",
+                                        type: this.docx.UnderlineType.SINGLE,
+                                        color: "000000"
                                     };
                                 }
                                 if (textDecoration && textDecoration.includes('line-through')) {
-                                    textRun.strike = { type: 'singleStrike', color: '000000' };
+                                    textRun.strike = true;
                                 }
                                 if (verticalAlign === 'super') {
                                     textRun.superScript = true;
