@@ -2196,10 +2196,8 @@
             localStorage.setItem('bytedraft-theme', currentTheme);
             updateThemeToggleButton();
             
-            // Force a complete theme refresh for all editors
-            setTimeout(() => {
-                forceThemeRefresh();
-            }, 100);
+            // Refresh the page to apply theme changes to TinyMCE
+            location.reload();
         }
 
         function updateThemeToggleButton() {
