@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="0.0.39">
+    <meta name="version" content="0.0.40">
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
@@ -581,6 +581,11 @@
             if (!currentProject) return;
             const container = document.getElementById('sectionsContainer');
             container.innerHTML = '';
+            
+            // Add drop zone to container
+            container.addEventListener('dragover', handleDragOver);
+            container.addEventListener('drop', handleDrop);
+            
             currentProject.sections.forEach((section, index) => {
                 renderSubsectionTree(section, [index], container, 0);
             });
@@ -593,9 +598,23 @@
             nodeDiv.style.marginLeft = '';
             nodeDiv.style.marginBottom = '16px';
             nodeDiv.setAttribute('id', `section-${path.join('-')}`);
+            nodeDiv.setAttribute('data-path', JSON.stringify(path));
+            nodeDiv.setAttribute('draggable', 'true');
+            
+            // Add drag and drop event listeners
+            nodeDiv.addEventListener('dragstart', handleDragStart);
+            nodeDiv.addEventListener('dragover', handleDragOver);
+            nodeDiv.addEventListener('drop', handleDrop);
+            nodeDiv.addEventListener('dragenter', handleDragEnter);
+            nodeDiv.addEventListener('dragleave', handleDragLeave);
+            nodeDiv.addEventListener('dragend', handleDragEnd);
+            
             nodeDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-1" style="justify-content: space-between;">
                   <div class="d-flex align-items-center" style="gap: 8px;">
+                    <div class="drag-handle" style="cursor: grab; padding: 4px; color: #6c757d;" draggable="true">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
                     <input type="text" class="form-control form-control-sm" value="${node.title}" style="width: 220px;"
                         onchange="updateSubsectionTitleByPath(${JSON.stringify(path)}, this.value)">
                     <button class="btn btn-sm btn-outline-danger btn-icon" onclick="removeSubsectionByPath(${JSON.stringify(path)})">
@@ -611,6 +630,14 @@
                 <div id="subsections-${path.join('-')}" class="subsections-container"></div>
             `;
             parentContainer.appendChild(nodeDiv);
+            
+            // Add mousedown event to drag handle to prevent text selection
+            const dragHandle = nodeDiv.querySelector('.drag-handle');
+            dragHandle.addEventListener('mousedown', (e) => {
+                // Prevent text selection during drag
+                e.preventDefault();
+            });
+            
             // Initialize TinyMCE
             const isDarkTheme = currentTheme === 'dark';
             console.log('Initializing editor with theme:', currentTheme, 'isDark:', isDarkTheme);
@@ -743,15 +770,28 @@
         }
         // Helper functions for recursive data access
         function getNodeByPath(path) {
+            if (!currentProject || !currentProject.sections || !path || path.length === 0) {
+                return null;
+            }
+            
             let node = currentProject.sections[path[0]];
+            if (!node) return null;
+            
             for (let i = 1; i < path.length; i++) {
+                if (!node.subsections || !node.subsections[path[i]]) {
+                    return null;
+                }
                 node = node.subsections[path[i]];
             }
             return node;
         }
         function setNodeContentByPath(path, content) {
             let node = getNodeByPath(path);
-            node.content = content;
+            if (node) {
+                node.content = content;
+            } else {
+                console.warn('Node not found for path:', path, 'Content not saved');
+            }
         }
         function updateSubsectionTitleByPath(path, value) {
             let node = getNodeByPath(path);
@@ -2188,6 +2228,286 @@
                 }
             }, 500);
         });
+
+        // Drag and Drop functionality for reordering sections and subsections
+        let draggedElement = null;
+        let draggedPath = null;
+
+        function handleDragStart(e) {
+            // The dragged element is the section itself
+            const sectionElement = e.target;
+            if (!sectionElement || !sectionElement.hasAttribute('data-path')) return;
+            
+            draggedElement = sectionElement;
+            draggedPath = JSON.parse(sectionElement.getAttribute('data-path'));
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', sectionElement.outerHTML);
+            
+            // Add visual feedback to the section
+            sectionElement.style.opacity = '0.5';
+            sectionElement.classList.add('dragging');
+            
+            // Set the drag image
+            e.dataTransfer.setDragImage(sectionElement, 0, 0);
+            
+            console.log('Drag started:', { draggedPath, element: sectionElement });
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Add visual feedback for drop zones
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement && targetElement !== draggedElement) {
+                // Remove any existing drop classes
+                targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+                
+                // Determine drop action based on position
+                const rect = targetElement.getBoundingClientRect();
+                const dropY = e.clientY;
+                const elementCenterY = rect.top + rect.height / 2;
+                const targetPath = JSON.parse(targetElement.getAttribute('data-path'));
+                
+                if (dropY > elementCenterY && targetPath.length === 1) {
+                    // Dropping in lower half of a section - will become child
+                    targetElement.classList.add('drop-as-child');
+                } else if (dropY <= elementCenterY && draggedPath && draggedPath.length > 1 && targetPath.length === 1) {
+                    // Dropping in upper half of a section with a subsection - will become section
+                    targetElement.classList.add('drop-as-section');
+                } else {
+                    // Default drop zone
+                    targetElement.classList.add('drag-over');
+                }
+            }
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement && targetElement !== draggedElement) {
+                targetElement.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement) {
+                targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            }
+        }
+
+        function handleDragEnd(e) {
+            // Clean up any remaining drag state
+            if (draggedElement) {
+                draggedElement.style.opacity = '';
+                draggedElement.classList.remove('dragging');
+            }
+            
+            // Remove all drop-related classes from all elements
+            document.querySelectorAll('.drag-over, .drop-as-child, .drop-as-section').forEach(el => {
+                el.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            });
+            
+            // Reset drag state
+            draggedElement = null;
+            draggedPath = null;
+            
+            console.log('Drag ended');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Drop event triggered');
+            
+            const targetElement = e.target.closest('[data-path]');
+            if (!targetElement) {
+                console.log('No target element found');
+                return;
+            }
+            
+            if (!draggedElement || !draggedPath) {
+                console.log('No dragged element or path');
+                return;
+            }
+            
+            const targetPath = JSON.parse(targetElement.getAttribute('data-path'));
+            console.log('Target path:', targetPath);
+            
+            // Remove visual feedback
+            draggedElement.style.opacity = '';
+            draggedElement.classList.remove('dragging');
+            targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            
+            // Don't allow dropping on itself
+            if (JSON.stringify(draggedPath) === JSON.stringify(targetPath)) {
+                console.log('Dropping on itself, ignoring');
+                return;
+            }
+            
+            // Determine the intended target based on the drop position
+            const rect = targetElement.getBoundingClientRect();
+            const dropY = e.clientY;
+            const elementCenterY = rect.top + rect.height / 2;
+            
+            // If dropping in the upper half of the target, insert before it
+            // If dropping in the lower half, insert as a child (for sections) or after it (for subsections)
+            let insertAsChild = false;
+            let finalTargetPath = targetPath;
+            
+            if (dropY > elementCenterY) {
+                // Dropping in lower half
+                if (targetPath.length === 1) {
+                    // Dropping on a section - make it a child
+                    insertAsChild = true;
+                    finalTargetPath = targetPath; // Keep the section path, insertAsChild will handle it
+                } else {
+                    // Dropping on a subsection - insert after it
+                    finalTargetPath = [...targetPath.slice(0, -1), targetPath[targetPath.length - 1] + 1];
+                }
+            } else {
+                // Dropping in upper half - insert before the target
+                finalTargetPath = targetPath;
+            }
+            
+            // Special case: if dragging a subsection to a section's upper half, make it a top-level section
+            if (draggedPath.length > 1 && targetPath.length === 1 && dropY <= elementCenterY) {
+                insertAsChild = false;
+                finalTargetPath = targetPath; // This will insert before the target section
+            }
+            
+            // Move the section/subsection
+            console.log('Moving node:', { 
+                sourcePath: draggedPath, 
+                targetPath: finalTargetPath, 
+                insertAsChild,
+                dropY,
+                elementCenterY,
+                dropPosition: dropY > elementCenterY ? 'lower' : 'upper'
+            });
+            
+            moveNodeByPath(draggedPath, finalTargetPath, insertAsChild);
+            
+            // Reset drag state
+            draggedElement = null;
+            draggedPath = null;
+        }
+
+        function moveNodeByPath(sourcePath, targetPath, insertAsChild = false) {
+            if (!currentProject) return;
+            
+            console.log('moveNodeByPath called:', { sourcePath, targetPath, insertAsChild });
+            
+            // Get the source node
+            const sourceNode = getNodeByPath(sourcePath);
+            if (!sourceNode) return;
+            
+            // Special case: if source is a subsection and target is a section, make it a top-level section
+            if (sourcePath.length > 1 && targetPath.length === 1 && !insertAsChild) {
+                console.log('Converting subsection to section level');
+            }
+            
+            // Clean up TinyMCE editors before moving to prevent path conflicts
+            tinymce.remove();
+            
+            // Remove from source location
+            if (sourcePath.length === 1) {
+                // Moving a top-level section
+                currentProject.sections.splice(sourcePath[0], 1);
+            } else {
+                // Moving a subsection
+                const sourceParent = getNodeByPath(sourcePath.slice(0, -1));
+                sourceParent.subsections.splice(sourcePath[sourcePath.length - 1], 1);
+            }
+            
+            // Insert at target location
+            if (insertAsChild && targetPath.length === 1) {
+                // Inserting as a child of a section
+                const targetSection = getNodeByPath(targetPath);
+                if (!targetSection) {
+                    console.error('Target section not found:', targetPath);
+                    return;
+                }
+                if (!targetSection.subsections) {
+                    targetSection.subsections = [];
+                }
+                targetSection.subsections.unshift(sourceNode); // Add as first child
+            } else if (targetPath.length === 1) {
+                // Moving to top-level sections
+                if (targetPath[0] >= currentProject.sections.length) {
+                    // If target index is beyond current sections, append to end
+                    currentProject.sections.push(sourceNode);
+                } else {
+                    currentProject.sections.splice(targetPath[0], 0, sourceNode);
+                }
+            } else if (targetPath.length > 1) {
+                // Moving to subsections
+                const targetParent = getNodeByPath(targetPath.slice(0, -1));
+                if (!targetParent) {
+                    console.error('Target parent not found:', targetPath.slice(0, -1));
+                    return;
+                }
+                if (!targetParent.subsections) {
+                    targetParent.subsections = [];
+                }
+                targetParent.subsections.splice(targetPath[targetPath.length - 1], 0, sourceNode);
+            }
+            
+            console.log('Node moved successfully');
+            
+            // Re-render sections to update the UI with a small delay to ensure TinyMCE cleanup
+            setTimeout(() => {
+                renderSections();
+                // Update TOC to reflect new structure
+                setTimeout(() => updateTOCPreview(), 100);
+            }, 50);
+            
+            // Update project timestamp
+            currentProject.updatedAt = new Date().toISOString();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+            toast.textContent = 'Section reordered successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Helper function to promote subsection to section level
+        function promoteSubsectionToSection(subsectionPath) {
+            if (!currentProject) return;
+            
+            console.log('Promoting subsection to section:', subsectionPath);
+            
+            // Get the subsection
+            const subsection = getNodeByPath(subsectionPath);
+            if (!subsection) return;
+            
+            // Remove from current location
+            if (subsectionPath.length > 1) {
+                const parent = getNodeByPath(subsectionPath.slice(0, -1));
+                parent.subsections.splice(subsectionPath[subsectionPath.length - 1], 1);
+            }
+            
+            // Add to top-level sections
+            currentProject.sections.push(subsection);
+            
+            // Re-render and update
+            renderSections();
+            setTimeout(() => updateTOCPreview(), 100);
+            currentProject.updatedAt = new Date().toISOString();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+            toast.textContent = 'Subsection promoted to section level!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
     </script>
 </body>
 </html> 

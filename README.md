@@ -15,6 +15,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ### 📚 **Document Structure**
 - **Unlimited Nested Sections**: Create complex document hierarchies with automatic numbering
+- **Drag & Drop Reordering**: Intuitive drag and drop interface to reorder sections and subsections
 - **Professional Heading Hierarchy**: Automatic Heading 1, 2, 3 styles with proper numbering (1., 1.1., 1.1.1.)
 - **Auto-updating Table of Contents**: Word-compatible TOC field that updates automatically
 - **Professional Templates**: Pre-built templates for various document types
@@ -84,6 +85,24 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 9. Configure headers/footers using "Edit Header/Footer"
 10. Export to DOCX when finished
 
+## 🎯 Drag & Drop Usage
+
+### **Reordering Sections:**
+- **Drag any section** using the grip handle (⋮⋮)
+- **Drop on another section** to reorder at the same level
+- **Drop in empty space** to move to the end
+
+### **Moving Subsections:**
+- **🔵 Blue zone** (lower half of section): Makes it a child of that section
+- **🔴 Red zone** (upper half of section): Promotes it to a top-level section
+- **Drop between subsections**: Reorders within the same parent
+
+### **Visual Feedback:**
+- **Thick dashed borders**: 4px borders for clear visibility
+- **Color-coded zones**: Blue for child, red for promotion
+- **Hover effects**: Visual feedback during drag operations
+- **Success messages**: Confirmation when reordering is complete
+
 ## 🛠️ Advanced Features
 
 ### Document Structure & Numbering
@@ -104,6 +123,20 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Cell Alignment**: Text alignment within cells maintained
 - **Complex Formatting**: Nested content, images, and formatting preserved
 - **Size Control**: Table dimensions and positioning maintained
+
+### Drag & Drop Section Management
+- **Intuitive Reordering**: Drag sections and subsections to reorder them easily
+- **Color-Coded Drop Zones**: 
+  - 🔵 **Blue zones**: Add as child/subsection
+  - 🔴 **Red zones**: Promote to top-level section
+  - **Thick borders**: 4px dashed borders for clear visibility
+- **Visual Feedback**: Clear visual indicators during drag operations with hover effects
+- **Hierarchical Movement**: Move subsections between different parent sections
+- **Automatic Numbering**: Section numbers update automatically after reordering
+- **Content Preservation**: All content, formatting, and nested structure is maintained
+- **Cross-Section Movement**: Subsections can be moved to different parent sections
+- **Drag Handles**: Dedicated grip handles (⋮⋮) for precise control over reordering
+- **TinyMCE Integration**: Seamless editor handling during reordering operations
 
 ### Image Management
 - **Supported Formats**: PNG, JPEG, GIF, WebP
@@ -284,5 +317,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple 
-**Version** 0.0.39 
+**Version** 0.0.40 
 © 2025 - Built for offline productivity 
