@@ -2035,9 +2035,15 @@ class ModernDocxExporter {
     createChangelogPage(project) {
         // Get changelog data from localStorage
         const allChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
-        const changelogData = allChangelog[project.id] ? JSON.parse(allChangelog[project.id]) : [];
+        const changelogData = allChangelog[project.id] || [];
         
-        if (changelogData.length === 0) {
+        console.log('Changelog data type:', typeof changelogData);
+        console.log('Changelog data:', changelogData);
+        
+        // Ensure changelogData is an array
+        const changelogArray = Array.isArray(changelogData) ? changelogData : [];
+        
+        if (changelogArray.length === 0) {
             // If no changelog data, return empty page with just title
             return [
                 new this.docx.Paragraph({
@@ -2145,7 +2151,7 @@ class ModernDocxExporter {
         ];
 
         // Add data rows
-        changelogData.forEach(row => {
+        changelogArray.forEach(row => {
             tableRows.push(
                 new this.docx.TableRow({
                     children: [
