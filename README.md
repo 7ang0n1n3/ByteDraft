@@ -52,6 +52,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Status Tracking**: Draft, Working, and Publish statuses
 - **Real-time Preview**: See changes reflected immediately
 - **Dark/Light Theme**: Toggle between themes for comfortable editing with persistence
+- **Centralized Notifications**: All status messages appear in the top center for consistent user experience
 - **Professional CSS Organization**: Well-structured styles with comprehensive documentation
 
 ### 💾 **Data Management**
@@ -181,11 +182,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Easy Management**: Remove logos with one click
 - **Professional Integration**: Logos appear at the top of title pages in DOCX exports
 
-### Page Numbering Settings
+### Page Settings & Layout
 - **Configurable Parameters**: Adjust characters per line, lines per page, header height, and paragraph spacing
 - **Accurate Estimation**: Better page number calculations for TOC and document planning
 - **Professional Layout**: Optimized settings for different document types
 - **User Control**: Fine-tune page layout parameters for specific requirements
+- **Logo Management**: Upload and manage document logos directly from page settings
+- **Integrated Interface**: All page-related settings in one convenient modal
 
 ### Enhanced JSON Import/Export
 - **Complete Data Preservation**: All project data including document info, changelog, headers/footers, and version history
@@ -203,9 +206,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ### Theme System
 - **Dark/Light Mode**: Toggle between themes with local storage persistence
-- **TinyMCE Integration**: Editor automatically adapts to theme changes
+- **Page Refresh Integration**: Clean theme switching with automatic page refresh for TinyMCE compatibility
 - **Comprehensive Styling**: All UI components properly themed with CSS custom properties
-- **Smooth Transitions**: Animated theme switching
+- **Persistent Settings**: Theme preference saved and restored automatically
 - **Modular CSS**: Well-organized styles with comprehensive documentation and logical sections
 
 ## 📋 Requirements
@@ -326,5 +329,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple 
-**Version** 0.0.41 
+**Version** 0.0.42 
 © 2025 - Built for offline productivity 
