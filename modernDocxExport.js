@@ -1583,15 +1583,111 @@ class ModernDocxExporter {
             link: ''
         };
         
+        // Get logo data from localStorage
+        const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+        const logoData = allLogos[project.id];
+        
+        console.log('Logo data found:', !!logoData, 'Project ID:', project.id);
+        if (logoData) {
+            console.log('Logo data length:', logoData.length);
+        }
+        
         // Create title page with proper positioning
-        return [
-            // 5 empty lines to position title 5 lines down from top
-            new this.docx.Paragraph({
-                text: '',
-                spacing: { before: 0, after: 1500 } // 5 lines worth of space (300 per line)
-            }),
+        const titlePageElements = [];
+        
+        // Add logo if available
+        if (logoData) {
+            try {
+                // Convert base64 data URL to Uint8Array for browser environment
+                const base64Data = logoData.split(',')[1];
+                const binaryString = atob(base64Data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Add logo at the top using a table for left alignment
+                titlePageElements.push(
+                    new this.docx.Table({
+                        rows: [
+                            new this.docx.TableRow({
+                                children: [
+                                    new this.docx.TableCell({
+                                        children: [
+                                            new this.docx.Paragraph({
+                                                children: [
+                                                    new this.docx.ImageRun({
+                                                        data: bytes,
+                                                        transformation: {
+                                                            width: 200,
+                                                            height: 120
+                                                        }
+                                                    })
+                                                ]
+                                            })
+                                        ],
+                                        width: { size: 30, type: this.docx.WidthType.PERCENTAGE },
+                                        borders: {
+                                            top: { style: this.docx.BorderStyle.NONE },
+                                            bottom: { style: this.docx.BorderStyle.NONE },
+                                            left: { style: this.docx.BorderStyle.NONE },
+                                            right: { style: this.docx.BorderStyle.NONE }
+                                        }
+                                    }),
+                                    new this.docx.TableCell({
+                                        children: [new this.docx.Paragraph({ text: '' })],
+                                        width: { size: 70, type: this.docx.WidthType.PERCENTAGE },
+                                        borders: {
+                                            top: { style: this.docx.BorderStyle.NONE },
+                                            bottom: { style: this.docx.BorderStyle.NONE },
+                                            left: { style: this.docx.BorderStyle.NONE },
+                                            right: { style: this.docx.BorderStyle.NONE }
+                                        }
+                                    })
+                                ]
+                            })
+                        ],
+                        width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
+                        borders: {
+                            top: { style: this.docx.BorderStyle.NONE },
+                            bottom: { style: this.docx.BorderStyle.NONE },
+                            left: { style: this.docx.BorderStyle.NONE },
+                            right: { style: this.docx.BorderStyle.NONE }
+                        }
+                    })
+                );
+                
+                // Add spacing after the logo table
+                titlePageElements.push(
+                    new this.docx.Paragraph({
+                        text: '',
+                        spacing: { before: 0, after: 800 }
+                    })
+                );
+                
+                console.log('Logo added successfully to title page');
+            } catch (error) {
+                console.warn('Error processing logo:', error);
+                // Fallback to original spacing if logo fails
+                titlePageElements.push(
+                    new this.docx.Paragraph({
+                        text: '',
+                        spacing: { before: 0, after: 1500 }
+                    })
+                );
+            }
+        } else {
+            // 5 empty lines to position title 5 lines down from top (original spacing)
+            titlePageElements.push(
+                new this.docx.Paragraph({
+                    text: '',
+                    spacing: { before: 0, after: 1500 } // 5 lines worth of space (300 per line)
+                })
+            );
+        }
             
-            // Project title - 36pt font size
+        // Project title - 36pt font size
+        titlePageElements.push(
             new this.docx.Paragraph({
                 children: [
                     new this.docx.TextRun({
@@ -1603,9 +1699,11 @@ class ModernDocxExporter {
                 ],
                 alignment: this.docx.AlignmentType.CENTER,
                 spacing: { before: 0, after: 400 }
-            }),
+            })
+        );
             
-            // Project description - 18pt font size
+        // Project description - 18pt font size
+        titlePageElements.push(
             new this.docx.Paragraph({
                 children: [
                     new this.docx.TextRun({
@@ -1617,21 +1715,27 @@ class ModernDocxExporter {
                 ],
                 alignment: this.docx.AlignmentType.CENTER,
                 spacing: { before: 0, after: 200 }
-            }),
+            })
+        );
             
-            // Add spacing to push document info to bottom (14 lines up from bottom - moved up 4 lines)
+        // Add spacing to push document info to bottom (13 lines up from bottom - moved up 5 lines)
+        titlePageElements.push(
             new this.docx.Paragraph({
                 text: '',
-                spacing: { before: 0, after: 4200 } // Space to push info box to bottom (14 lines = 4200, reduced from 18 lines)
-            }),
-            
-            // Add additional spacing to ensure title page fills properly
+                spacing: { before: 0, after: 3900 } // Space to push info box to bottom (13 lines = 3900, reduced from 14 lines)
+            })
+        );
+        
+        // Add additional spacing to ensure title page fills properly
+        titlePageElements.push(
             new this.docx.Paragraph({
                 text: '',
                 spacing: { before: 0, after: 2000 } // Additional spacing to fill the page
-            }),
-            
-            // Document information box positioned 5 lines up from bottom
+            })
+        );
+        
+        // Document information box positioned 5 lines up from bottom
+        titlePageElements.push(
             new this.docx.Paragraph({
                 children: [
                     new this.docx.TextRun({
@@ -1644,9 +1748,11 @@ class ModernDocxExporter {
                 ],
                 alignment: this.docx.AlignmentType.CENTER,
                 spacing: { before: 0, after: 200 }
-            }),
-            
-            // Document info table using data from Edit Document Info
+            })
+        );
+        
+        // Document info table using data from Edit Document Info
+        titlePageElements.push(
             new this.docx.Table({
                 rows: [
                     new this.docx.TableRow({
@@ -1824,7 +1930,9 @@ class ModernDocxExporter {
                 width: { size: 80, type: this.docx.WidthType.PERCENTAGE },
                 alignment: this.docx.AlignmentType.CENTER
             })
-        ];
+        );
+        
+        return titlePageElements;
     }
 
     createDocumentInfoTable(project) {

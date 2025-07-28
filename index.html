@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="0.0.40">
+    <meta name="version" content="0.0.41">
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
@@ -308,6 +308,27 @@
                         <label class="form-label">Paragraph spacing (lines)</label>
                         <input type="number" class="form-control" id="paragraphSpacing" value="2" min="0" max="5">
                         <small class="text-muted">Extra lines added between paragraphs</small>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h6 class="mb-3">Document Logo</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Logo for DOCX Export</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="logoPreview" class="border rounded p-2" style="width: 100px; height: 60px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                                <small class="text-muted">No logo</small>
+                            </div>
+                            <div class="flex-grow-1">
+                                <input type="file" class="form-control" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)">
+                                <small class="text-muted">Upload a logo to appear on the title page (PNG, JPG, GIF)</small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLogo()" id="removeLogoBtn" style="display: none;">
+                                <i class="fas fa-trash me-1"></i>Remove Logo
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -922,7 +943,7 @@
             // Show success message
             const toast = document.createElement('div');
             toast.className = 'alert alert-info position-fixed';
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+                            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
             toast.textContent = 'Project deleted successfully!';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
@@ -956,7 +977,7 @@
                 // Show success message
                 const toast = document.createElement('div');
                 toast.className = 'alert alert-success position-fixed';
-                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+                toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
                 toast.textContent = `Project status updated to ${newStatus}!`;
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 3000);
@@ -1517,6 +1538,8 @@
             const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
             const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
             const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+            const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
 
             // Filter version history for this specific project
             const projectVersionHistory = allVersionHistory.filter(v => v.projectId === projectId);
@@ -1528,6 +1551,8 @@
                 customChangelog: allCustomChangelog[projectId] || {},
                 headerFooter: allHeaderFooter[projectId] || {},
                 versionHistory: projectVersionHistory,
+                logo: allLogos[projectId] || null,
+                pageSettings: allPageSettings[projectId] || {},
                 exportedAt: new Date().toISOString(),
                 version: '1.0'
             };
@@ -1584,12 +1609,16 @@
                     const importedCustomChangelog = importedProject.customChangelog || {};
                     const headerFooter = importedProject.headerFooter || {};
                     const importedVersionHistory = importedProject.versionHistory || [];
+                    const importedLogo = importedProject.logo || null;
+                    const importedPageSettings = importedProject.pageSettings || {};
 
                     // Remove additional data from the project object
                     delete importedProject.documentInfo;
                     delete importedProject.customChangelog;
                     delete importedProject.headerFooter;
                     delete importedProject.versionHistory;
+                    delete importedProject.logo;
+                    delete importedProject.pageSettings;
 
                     // Add to projects array
                     projects.push(importedProject);
@@ -1599,10 +1628,16 @@
                     const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
                     const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
                     const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+                    const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+                    const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
 
                     allDocInfo[importedProject.id] = documentInfo;
                     allCustomChangelog[importedProject.id] = importedCustomChangelog;
                     allHeaderFooter[importedProject.id] = headerFooter;
+                    if (importedLogo) {
+                        allLogos[importedProject.id] = importedLogo;
+                    }
+                    allPageSettings[importedProject.id] = importedPageSettings;
 
                     // Update version history entries with new project ID
                     const updatedVersionHistory = importedVersionHistory.map(v => ({
@@ -1615,6 +1650,8 @@
                     localStorage.setItem('bytedraft_custom_changelog', JSON.stringify(allCustomChangelog));
                     localStorage.setItem('bytedraft_header_footer', JSON.stringify(allHeaderFooter));
                     localStorage.setItem('bytedraft_versions', JSON.stringify(allVersionHistory));
+                    localStorage.setItem('bytedraft_logos', JSON.stringify(allLogos));
+                    localStorage.setItem('bytedraft_page_settings', JSON.stringify(allPageSettings));
                     
                     // Save to localStorage
                     saveProjects();
@@ -2507,6 +2544,141 @@
             toast.textContent = 'Subsection promoted to section level!';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Page Settings and Logo Functions
+        function showPageSettings() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            // Load current page settings
+            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const projectSettings = pageSettings[currentProject.id] || {
+                charsPerLine: 80,
+                linesPerPage: 40,
+                headerHeight: 3,
+                paragraphSpacing: 2
+            };
+            
+            document.getElementById('charsPerLine').value = projectSettings.charsPerLine;
+            document.getElementById('linesPerPage').value = projectSettings.linesPerPage;
+            document.getElementById('headerHeight').value = projectSettings.headerHeight;
+            document.getElementById('paragraphSpacing').value = projectSettings.paragraphSpacing;
+            
+            // Load logo
+            loadLogoPreview();
+            
+            new bootstrap.Modal(document.getElementById('pageSettingsModal')).show();
+        }
+
+        function savePageSettings() {
+            if (!currentProject) return;
+            
+            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            pageSettings[currentProject.id] = {
+                charsPerLine: parseInt(document.getElementById('charsPerLine').value),
+                linesPerPage: parseInt(document.getElementById('linesPerPage').value),
+                headerHeight: parseInt(document.getElementById('headerHeight').value),
+                paragraphSpacing: parseInt(document.getElementById('paragraphSpacing').value)
+            };
+            
+            localStorage.setItem('bytedraft_page_settings', JSON.stringify(pageSettings));
+            
+            // Save logo if exists
+            saveLogo();
+            
+            bootstrap.Modal.getInstance(document.getElementById('pageSettingsModal')).hide();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+            toast.textContent = 'Page settings saved successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // Logo Functions
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file (PNG, JPG, GIF)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const logoData = e.target.result;
+                displayLogoPreview(logoData);
+                
+                // Store logo data
+                const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+                logoStorage[currentProject.id] = logoData;
+                localStorage.setItem('bytedraft_logos', JSON.stringify(logoStorage));
+                
+                console.log('Logo uploaded and stored for project:', currentProject.id);
+                console.log('Logo data length:', logoData.length);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayLogoPreview(logoData) {
+            const preview = document.getElementById('logoPreview');
+            const removeBtn = document.getElementById('removeLogoBtn');
+            
+            preview.innerHTML = `<img src="${logoData}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+            removeBtn.style.display = 'block';
+        }
+
+        function loadLogoPreview() {
+            if (!currentProject) return;
+            
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const logoData = logoStorage[currentProject.id];
+            
+            console.log('Loading logo preview for project:', currentProject.id);
+            console.log('Logo data found:', !!logoData);
+            
+            if (logoData) {
+                displayLogoPreview(logoData);
+            } else {
+                const preview = document.getElementById('logoPreview');
+                const removeBtn = document.getElementById('removeLogoBtn');
+                
+                preview.innerHTML = '<small class="text-muted">No logo</small>';
+                removeBtn.style.display = 'none';
+            }
+        }
+
+        function removeLogo() {
+            if (!currentProject) return;
+            
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            delete logoStorage[currentProject.id];
+            localStorage.setItem('bytedraft_logos', JSON.stringify(logoStorage));
+            
+            const preview = document.getElementById('logoPreview');
+            const removeBtn = document.getElementById('removeLogoBtn');
+            
+            preview.innerHTML = '<small class="text-muted">No logo</small>';
+            removeBtn.style.display = 'none';
+            
+            // Clear file input
+            document.getElementById('logoUpload').value = '';
+        }
+
+        function saveLogo() {
+            // Logo is already saved in handleLogoUpload, this function is for consistency
+            // with the savePageSettings flow
+        }
+
+        function getProjectLogo(projectId) {
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            return logoStorage[projectId] || null;
         }
     </script>
 </body>

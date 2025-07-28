@@ -42,6 +42,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Professional Layout**: Proper headings, lists, tables, and styling
 - **Document Metadata**: Includes title page, version history, and changelog
 - **Custom Headers/Footers**: Support for `{{title}}` and `{{page}}` variables with table-based layout
+- **Document Logo Support**: Upload and embed custom logos in DOCX title pages
 - **Multi-section Export**: Title page, changelog, and TOC without headers/footers; main content with custom headers/footers
 
 ### 🎨 **User Interface**
@@ -171,6 +172,14 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Status Changes**: Document status updates are logged
 - **Export History**: Track when documents were exported
 - **Data Persistence**: Version history preserved in JSON exports and imports
+
+### Document Logo Management
+- **Logo Upload**: Upload custom logos (PNG, JPG, GIF) for DOCX title pages
+- **Preview System**: Real-time logo preview in page settings
+- **Automatic Sizing**: Logos are automatically sized and positioned on title pages
+- **Data Persistence**: Logo data preserved in JSON exports and imports
+- **Easy Management**: Remove logos with one click
+- **Professional Integration**: Logos appear at the top of title pages in DOCX exports
 
 ### Page Numbering Settings
 - **Configurable Parameters**: Adjust characters per line, lines per page, header height, and paragraph spacing
@@ -317,5 +326,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple 
-**Version** 0.0.40 
+**Version** 0.0.41 
 © 2025 - Built for offline productivity 
