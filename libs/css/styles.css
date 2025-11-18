@@ -1135,17 +1135,17 @@ body {
 /* Drop zones for different actions */
 .section-item.drop-as-child,
 .subsection-item.drop-as-child {
-    border: 4px dashed #0d6efd !important;
-    background-color: rgba(13, 110, 253, 0.15) !important;
-    box-shadow: 0 0 15px rgba(13, 110, 253, 0.4);
+    border: 8px dashed #0066ff !important;
+    background-color: rgba(0, 102, 255, 0.3) !important;
+    box-shadow: 0 0 25px rgba(0, 102, 255, 0.6), inset 0 0 20px rgba(0, 102, 255, 0.2);
     border-radius: 8px;
 }
 
 .section-item.drop-as-section,
 .subsection-item.drop-as-section {
-    border: 4px dashed #dc3545 !important;
-    background-color: rgba(220, 53, 69, 0.15) !important;
-    box-shadow: 0 0 15px rgba(220, 53, 69, 0.4);
+    border: 8px dashed #ff3333 !important;
+    background-color: rgba(255, 51, 51, 0.3) !important;
+    box-shadow: 0 0 25px rgba(255, 51, 51, 0.6), inset 0 0 20px rgba(255, 51, 51, 0.2);
     border-radius: 8px;
 }
 
@@ -1158,18 +1158,18 @@ body {
 
 [data-theme="dark"] .section-item.drop-as-child,
 [data-theme="dark"] .subsection-item.drop-as-child {
-    background-color: rgba(13, 110, 253, 0.25);
-    border-color: #0d6efd;
-    border-width: 10px;
-    box-shadow: 0 0 20px rgba(13, 110, 253, 0.5);
+    background-color: rgba(0, 102, 255, 0.4) !important;
+    border-color: #3399ff !important;
+    border-width: 14px !important;
+    box-shadow: 0 0 30px rgba(0, 102, 255, 0.8), inset 0 0 25px rgba(0, 102, 255, 0.3) !important;
 }
 
 [data-theme="dark"] .section-item.drop-as-section,
 [data-theme="dark"] .subsection-item.drop-as-section {
-    background-color: rgba(220, 53, 69, 0.25);
-    border-color: #dc3545;
-    border-width: 10px;
-    box-shadow: 0 0 20px rgba(220, 53, 69, 0.5);
+    background-color: rgba(255, 51, 51, 0.4) !important;
+    border-color: #ff6666 !important;
+    border-width: 14px !important;
+    box-shadow: 0 0 30px rgba(255, 51, 51, 0.8), inset 0 0 25px rgba(255, 51, 51, 0.3) !important;
 }
 
 [data-theme="dark"] .drag-handle:hover {
