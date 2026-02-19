@@ -1,0 +1,1688 @@
+        // Global state
+        let currentProject = null;
+        let projects = JSON.parse(localStorage.getItem('bytedraft_projects') || '[]');
+        let customFields = JSON.parse(localStorage.getItem('bytedraft_fields') || '[]');
+        let versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+        let customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+        // Migration: un-double-encode changelog entries saved by older versions
+        Object.keys(customChangelog).forEach(key => {
+            if (typeof customChangelog[key] === 'string') {
+                try { customChangelog[key] = JSON.parse(customChangelog[key]); }
+                catch(e) { customChangelog[key] = []; }
+            }
+        });
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showToast(message, type = 'info') {
+            const colorMap = { success: 'alert-success', warning: 'alert-warning', error: 'alert-danger', info: 'alert-info' };
+            const toast = document.createElement('div');
+            toast.className = `alert ${colorMap[type] || 'alert-info'} position-fixed shadow`;
+            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px; text-align: center;';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    showToast('Storage limit reached. Remove large images or export old projects.', 'error');
+                }
+            }
+        }
+
+
+
+        // Templates will be loaded from templates.json
+        let templates = {};
+
+        // Initialize the application
+        // On DOMContentLoaded, fetch templates.json and then initialize
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if libraries are loaded
+
+            // Use templates from templates.js
+            templates = window.templates || {};
+            renderProjects();
+            renderTemplates();
+            renderCustomFields();
+        });
+
+        // Project Management
+        function createProject() {
+            const name = document.getElementById('newProjectName').value;
+            const description = document.getElementById('newProjectDesc').value;
+            const templateKey = document.getElementById('newProjectTemplate').value;
+
+            if (!name) {
+                alert('Please enter a project name');
+                return;
+            }
+
+            let templateSections = [];
+            if (templateKey) {
+                if (templates && templates[templateKey] && Array.isArray(templates[templateKey].sections)) {
+                    templateSections = [...templates[templateKey].sections];
+                } else {
+                    alert('Template not found or invalid. Please check templates.js and the template key.');
+                    return;
+                }
+            }
+
+            const project = {
+                id: Date.now().toString(),
+                name: name,
+                description: description,
+                status: 'draft',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                sections: templateSections.length > 0 ? templateSections : [
+                    { id: '1', title: 'Introduction', content: '' }
+                ]
+            };
+
+            projects.push(project);
+            saveProjects();
+            renderProjects();
+
+            // Close modal and select new project
+            bootstrap.Modal.getInstance(document.getElementById('newProjectModal')).hide();
+            selectProject(project.id);
+        }
+
+        function selectProject(projectId) {
+            currentProject = projects.find(p => p.id === projectId);
+            document.getElementById('currentProjectTitle').textContent = currentProject.name;
+            renderProjectContent();
+            // Update TOC when project is selected
+            setTimeout(() => updateTOCPreview(), 200);
+
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projectsList');
+            container.innerHTML = '';
+            
+            const statusFilter = document.getElementById('statusFilter')?.value || 'all';
+            const filteredProjects = statusFilter === 'all' ? projects : projects.filter(p => p.status === statusFilter);
+            
+            if (filteredProjects.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-folder-open fa-2x mb-2"></i>
+                        <p class="mb-0">No projects found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredProjects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = `project-card ${currentProject?.id === project.id ? 'active' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div style="flex: 1; cursor: pointer;" onclick="selectProject('${project.id}')">
+                            <h6 class="mb-1">${escapeHtml(project.name)}</h6>
+                            <small class="text-muted">${escapeHtml(project.description) || 'No description'}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="exportProjectAsJSON('${project.id}'); event.stopPropagation();" title="Export as JSON">
+                                <i class="fas fa-file-code"></i>
+                            </button>
+                            <select class="status-selector" onchange="updateProjectStatus('${project.id}', this.value)" onclick="event.stopPropagation()">
+                                <option value="draft" ${project.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                <option value="working" ${project.status === 'working' ? 'selected' : ''}>Working</option>
+                                <option value="publish" ${project.status === 'publish' ? 'selected' : ''}>Publish</option>
+                            </select>
+                            <button class="btn-delete" onclick="deleteProject('${project.id}'); event.stopPropagation();" title="Delete Project">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Updated: ${new Date(project.updatedAt).toLocaleDateString()}</small>
+                        <span class="status-badge status-${project.status}">${project.status}</span>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function filterProjects() {
+            renderProjects();
+        }
+
+        function renderProjectContent() {
+            const container = document.getElementById('contentArea');
+            
+            if (!currentProject) {
+                // Show default state when no project is selected
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Select a project to get started</h5>
+                        <p class="text-muted">Or create a new project to begin documenting</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show project content when a project is selected
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h5 class="mb-1">${escapeHtml(currentProject.name)}</h5>
+                        <p class="text-muted mb-0">${escapeHtml(currentProject.description) || 'No description'}</p>
+                        <div class="mt-2">
+                            <span class="status-badge status-${currentProject.status}">${currentProject.status}</span>
+                            <small class="text-muted ms-2">Last updated: ${new Date(currentProject.updatedAt).toLocaleString()}</small>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" onchange="updateProjectStatus('${currentProject.id}', this.value)" style="width: auto;">
+                            <option value="draft" ${currentProject.status === 'draft' ? 'selected' : ''}>Draft</option>
+                            <option value="working" ${currentProject.status === 'working' ? 'selected' : ''}>Working</option>
+                            <option value="publish" ${currentProject.status === 'publish' ? 'selected' : ''}>Publish</option>
+                        </select>
+                        <button class="btn btn-outline-primary" onclick="addSection()">
+                            <i class="fas fa-plus me-1"></i>Add Section
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="saveProject()">
+                            <i class="fas fa-save me-1"></i>Save
+                        </button>
+                    </div>
+                </div>
+                <div id="sectionsContainer"></div>
+            `;
+            
+            renderSections();
+        }
+
+        function renderSections() {
+            tinymce.remove(); // Clean up all TinyMCE editors before re-rendering
+            if (!currentProject) return;
+            const container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+            
+            // Add drop zone to container
+            container.addEventListener('dragover', handleDragOver);
+            container.addEventListener('drop', handleDrop);
+            
+            currentProject.sections.forEach((section, index) => {
+                renderSubsectionTree(section, [index], container, 0);
+            });
+        }
+        // Recursive rendering for sections and sub-sections
+        function buildTinyMCEContentStyle(isDark) {
+            return `
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                    background-color: ${isDark ? '#2b3035' : '#ffffff'};
+                }
+                h1, h2, h3, h4, h5, h6 { 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                    margin-top: 1.5em;
+                    margin-bottom: 0.5em;
+                }
+                p { 
+                    margin-bottom: 1em; 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                li {
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { 
+                    border: 1px solid ${isDark ? '#495057' : '#dee2e6'}; 
+                    padding: 8px; 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                th { 
+                    background-color: ${isDark ? '#343a40' : '#f8f9fa'}; 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                code { 
+                    background-color: ${isDark ? '#343a40' : '#f8f9fa'}; 
+                    padding: 2px 4px; 
+                    border-radius: 3px; 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                pre { 
+                    background-color: ${isDark ? '#343a40' : '#f8f9fa'}; 
+                    padding: 1em; 
+                    border-radius: 4px; 
+                    overflow-x: auto; 
+                    color: ${isDark ? '#ffffff' : '#212529'};
+                }
+                a {
+                    color: #0d6efd;
+                }
+            `;
+        }
+
+        function getTinyMCEBaseConfig(selector, isDark) {
+            return {
+                selector,
+                height: 300,
+                license_key: 'gpl',
+                skin: isDark ? 'oxide-dark' : 'oxide',
+                content_css: isDark ? 'dark' : 'default',
+                menubar: 'file edit view insert format tools table help',
+                plugins: [
+                    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                    'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                    'insertdatetime', 'media', 'table', 'help', 'wordcount', 'save',
+                    'emoticons'
+                ],
+                toolbar: [
+                    'undo redo | formatselect | bold italic underline strikethrough',
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help'
+                ].join(' | '),
+                font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
+                font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
+                content_style: buildTinyMCEContentStyle(isDark),
+                images_upload_handler: (blobInfo) => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject('Image upload failed');
+                    reader.readAsDataURL(blobInfo.blob());
+                }),
+                file_picker_types: 'image',
+                file_picker_callback: (callback, value, meta) => {
+                    if (meta.filetype === 'image') {
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'file');
+                        input.setAttribute('accept', 'image/*');
+                        input.onchange = () => {
+                            const file = input.files[0];
+                            if (file) {
+                                const reader = new FileReader();
+                                reader.onload = () => callback(reader.result, { title: file.name });
+                                reader.readAsDataURL(file);
+                            }
+                        };
+                        input.click();
+                    }
+                }
+            };
+        }
+
+        function renderSubsectionTree(node, path, parentContainer, depth) {
+            const numberStr = path.map(i => i + 1).join('.');
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = depth === 0 ? 'section-item' : 'subsection-item';
+            nodeDiv.style.marginLeft = '';
+            nodeDiv.style.marginBottom = '16px';
+            nodeDiv.setAttribute('id', `section-${path.join('-')}`);
+            nodeDiv.setAttribute('data-path', JSON.stringify(path));
+            nodeDiv.setAttribute('draggable', 'true');
+            
+            // Add drag and drop event listeners
+            nodeDiv.addEventListener('dragstart', handleDragStart);
+            nodeDiv.addEventListener('dragover', handleDragOver);
+            nodeDiv.addEventListener('drop', handleDrop);
+            nodeDiv.addEventListener('dragenter', handleDragEnter);
+            nodeDiv.addEventListener('dragleave', handleDragLeave);
+            nodeDiv.addEventListener('dragend', handleDragEnd);
+            
+            nodeDiv.innerHTML = `
+                <div class="d-flex align-items-center mb-1" style="justify-content: space-between;">
+                  <div class="d-flex align-items-center" style="gap: 8px;">
+                    <div class="drag-handle" style="cursor: grab; padding: 4px; color: #6c757d;" draggable="true">
+                        <i class="fas fa-grip-vertical"></i>
+                    </div>
+                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(node.title)}" style="width: 220px;"
+                        onchange="updateSubsectionTitleByPath(${JSON.stringify(path)}, this.value)">
+                    <button class="btn btn-sm btn-outline-danger btn-icon" onclick="removeSubsectionByPath(${JSON.stringify(path)})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary btn-icon" onclick="addSubsectionByPath(${JSON.stringify(path)})">
+                        <i class="fas fa-plus"></i> Sub-section
+                    </button>
+                  </div>
+                  <span class="badge bg-secondary" style="font-size: 1em;">${numberStr}</span>
+                </div>
+                <textarea id="editor-${path.join('-')}" class="tinymce-editor"></textarea>
+                <div id="subsections-${path.join('-')}" class="subsections-container"></div>
+            `;
+            parentContainer.appendChild(nodeDiv);
+            
+            // Add mousedown event to drag handle to prevent text selection
+            const dragHandle = nodeDiv.querySelector('.drag-handle');
+            dragHandle.addEventListener('mousedown', (e) => {
+                // Prevent text selection during drag
+                e.preventDefault();
+            });
+            
+            // Initialize TinyMCE
+            const isDarkTheme = currentTheme === 'dark';
+            tinymce.init({
+                ...getTinyMCEBaseConfig(`#editor-${path.join('-')}`, isDarkTheme),
+                setup: function(editor) {
+                    editor.on('init', function() {
+                        editor.setContent(node.content || '');
+                    });
+                    editor.on('Change KeyUp', function() {
+                        setNodeContentByPath(path, editor.getContent());
+                        currentProject.updatedAt = new Date().toISOString();
+                        setTimeout(() => updateTOCPreview(), 500);
+                    });
+                }
+            });
+            // Render children
+            if (node.subsections && node.subsections.length > 0) {
+                const subContainer = nodeDiv.querySelector(`#subsections-${path.join('-')}`);
+                node.subsections.forEach((sub, idx) => {
+                    renderSubsectionTree(sub, path.concat(idx), subContainer, depth + 1);
+                });
+            }
+        }
+        // Helper functions for recursive data access
+        function getNodeByPath(path) {
+            if (!currentProject || !currentProject.sections || !path || path.length === 0) {
+                return null;
+            }
+            
+            let node = currentProject.sections[path[0]];
+            if (!node) return null;
+            
+            for (let i = 1; i < path.length; i++) {
+                if (!node.subsections || !node.subsections[path[i]]) {
+                    return null;
+                }
+                node = node.subsections[path[i]];
+            }
+            return node;
+        }
+        function setNodeContentByPath(path, content) {
+            let node = getNodeByPath(path);
+            if (node) {
+                node.content = content;
+            } else {
+                console.warn('Node not found for path:', path, 'Content not saved');
+            }
+        }
+        function updateSubsectionTitleByPath(path, value) {
+            let node = getNodeByPath(path);
+            node.title = value;
+            currentProject.updatedAt = new Date().toISOString();
+            setTimeout(() => updateTOCPreview(), 100);
+        }
+        function removeSubsectionByPath(path) {
+            if (path.length === 1) {
+                currentProject.sections.splice(path[0], 1);
+            } else {
+                let parent = getNodeByPath(path.slice(0, -1));
+                parent.subsections.splice(path[path.length - 1], 1);
+            }
+            renderSections();
+        }
+        function addSubsectionByPath(path) {
+            let node = getNodeByPath(path);
+            if (!node.subsections) node.subsections = [];
+            node.subsections.push({
+                id: Date.now().toString(),
+                title: 'New Sub-section',
+                content: '',
+                subsections: []
+            });
+            renderSections();
+        }
+
+        function addSection() {
+            if (!currentProject) return;
+            currentProject.sections.push({
+                id: Date.now().toString(),
+                title: 'New Section',
+                content: '',
+                subsections: []
+            });
+            renderSections();
+        }
+
+
+
+
+        function saveProject() {
+            if (!currentProject) return;
+            
+            const projectIndex = projects.findIndex(p => p.id === currentProject.id);
+            if (projectIndex !== -1) {
+                projects[projectIndex] = { ...currentProject };
+                saveProjects();
+                
+                // Add to version history
+                versionHistory.push({
+                    id: Date.now().toString(),
+                    projectId: currentProject.id,
+                    timestamp: new Date().toISOString(),
+                    description: 'Manual save'
+                });
+                saveVersionHistory();
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success position-fixed';
+                toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+                toast.textContent = 'Project saved successfully!';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        function deleteProject(projectId) {
+            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+                return;
+            }
+            
+            // Remove from projects array
+            projects = projects.filter(p => p.id !== projectId);
+            saveProjects();
+            
+            // Remove from version history
+            versionHistory = versionHistory.filter(v => v.projectId !== projectId);
+            saveVersionHistory();
+            
+            // Remove custom changelog if exists
+            if (customChangelog[projectId]) {
+                delete customChangelog[projectId];
+                saveCustomChangelog();
+            }
+            
+            // If this was the current project, clear it and refresh the main editor window
+            if (currentProject && currentProject.id === projectId) {
+                currentProject = null;
+                // Update the project title in the top bar
+                document.getElementById('currentProjectTitle').textContent = 'Select a Project';
+                // Refresh the main content area to show the default "select a project" message
+                renderProjectContent();
+                // Clear any TinyMCE editors to prevent memory leaks
+                tinymce.remove();
+            }
+            
+            // Re-render projects list
+            renderProjects();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-info position-fixed';
+                            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+            toast.textContent = 'Project deleted successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function updateProjectStatus(projectId, newStatus) {
+            const project = projects.find(p => p.id === projectId);
+            if (project) {
+                project.status = newStatus;
+                project.updatedAt = new Date().toISOString();
+                saveProjects();
+                
+                // Add to version history
+                versionHistory.push({
+                    id: Date.now().toString(),
+                    projectId: projectId,
+                    timestamp: new Date().toISOString(),
+                    description: `Status changed to ${newStatus}`
+                });
+                saveVersionHistory();
+                
+                // Update current project if it's the one being updated
+                if (currentProject && currentProject.id === projectId) {
+                    currentProject.status = newStatus;
+                    currentProject.updatedAt = new Date().toISOString();
+                }
+                
+                // Re-render projects list
+                renderProjects();
+                
+                // Show success message
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-success position-fixed';
+                toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+                toast.textContent = `Project status updated to ${newStatus}!`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }
+        }
+
+        // Templates
+        function renderTemplates() {
+            const container = document.getElementById('templatesList');
+            container.innerHTML = '';
+            
+            Object.entries(templates).forEach(([key, template]) => {
+                const card = document.createElement('div');
+                card.className = 'template-card';
+                card.onclick = () => showTemplatePreview(key);
+                
+                card.innerHTML = `
+                    <h6 class="mb-2">${escapeHtml(template.name)}</h6>
+                    <small class="text-muted">${template.sections.length} sections</small>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+
+        function showTemplatePreview(templateKey) {
+            const template = templates[templateKey];
+            if (!template) return;
+            document.getElementById('templatePreviewTitle').textContent = template.name;
+            document.getElementById('templatePreviewDesc').textContent =
+                `${template.sections.length} section${template.sections.length !== 1 ? 's' : ''}`;
+            const ul = document.getElementById('templatePreviewSections');
+            ul.innerHTML = '';
+            template.sections.forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                li.textContent = s.title;
+                ul.appendChild(li);
+            });
+            new bootstrap.Modal(document.getElementById('templatePreviewModal')).show();
+        }
+
+        // Custom Fields
+        function addCustomField() {
+            const name = document.getElementById('newFieldName').value;
+            const value = document.getElementById('newFieldValue').value;
+            const type = document.getElementById('newFieldType').value;
+            
+            if (!name) {
+                alert('Please enter a field name');
+                return;
+            }
+
+            customFields.push({
+                id: Date.now().toString(),
+                name: name,
+                value: value,
+                type: type
+            });
+            
+            saveCustomFields();
+            renderCustomFields();
+            
+            bootstrap.Modal.getInstance(document.getElementById('newFieldModal')).hide();
+        }
+
+        function renderCustomFields() {
+            const container = document.getElementById('customFieldsList');
+            container.innerHTML = '';
+            
+            customFields.forEach(field => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'field-item';
+                fieldDiv.innerHTML = `
+                    <input type="text" class="form-control form-control-sm" 
+                           value="${escapeHtml(field.value)}" 
+                           onchange="updateFieldValue('${field.id}', this.value)"
+                           placeholder="${escapeHtml(field.name)}">
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeField('${field.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                container.appendChild(fieldDiv);
+            });
+        }
+
+        function updateFieldValue(fieldId, value) {
+            const field = customFields.find(f => f.id === fieldId);
+            if (field) {
+                field.value = value;
+                saveCustomFields();
+            }
+        }
+
+        function removeField(fieldId) {
+            customFields = customFields.filter(f => f.id !== fieldId);
+            saveCustomFields();
+            renderCustomFields();
+        }
+
+        // Export Functions
+        async function exportDocument(format) {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+
+            switch (format) {
+                case 'docx':
+                    await exportToDocx();
+                    break;
+
+            }
+        }
+
+        async function exportToDocx() {
+            try {
+                console.log('Starting modern DOCX export...');
+                updateAllSectionContents();
+                saveProject();
+                
+                // Use the modern DOCX export implementation
+                await exportProjectToDocxModern(
+                    currentProject,
+                    customChangelog[currentProject.id] || '',
+                    versionHistory.filter(v => v.projectId === currentProject.id)
+                );
+                
+                console.log('DOCX export completed successfully');
+            } catch (error) {
+                console.error('Error in DOCX export:', error);
+                alert('Error creating DOCX file. Please try again.');
+            }
+        }
+
+
+
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Version History
+        function showVersionHistory() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            const projectVersions = versionHistory.filter(v => v.projectId === currentProject.id);
+            const container = document.getElementById('versionHistoryList');
+            container.innerHTML = '';
+            
+            projectVersions.forEach(version => {
+                const versionDiv = document.createElement('div');
+                versionDiv.className = 'version-item';
+                versionDiv.innerHTML = `
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>${escapeHtml(version.description)}</strong>
+                            <br>
+                            <small class="text-muted">${new Date(version.timestamp).toLocaleString()}</small>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(versionDiv);
+            });
+            
+            new bootstrap.Modal(document.getElementById('versionHistoryModal')).show();
+        }
+
+        // Utility Functions
+        function showNewProjectModal() {
+            new bootstrap.Modal(document.getElementById('newProjectModal')).show();
+        }
+
+        function showNewFieldModal() {
+            new bootstrap.Modal(document.getElementById('newFieldModal')).show();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        // Storage Functions
+        function saveProjects() {
+            safeSetItem('bytedraft_projects', JSON.stringify(projects));
+        }
+
+        function saveCustomFields() {
+            safeSetItem('bytedraft_fields', JSON.stringify(customFields));
+        }
+
+        function saveVersionHistory() {
+            safeSetItem('bytedraft_versions', JSON.stringify(versionHistory));
+        }
+
+        function saveCustomChangelog() {
+            // This function is kept for backward compatibility but now uses the table data
+            if (currentProject) {
+                // The data is already saved in updateChangelogCell, just ensure it's persisted
+                safeSetItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
+            }
+        }
+
+        function showCustomChangelogModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            renderChangelogTable();
+            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+        }
+
+        // Auto-save every 30 seconds
+        setInterval(() => {
+            if (currentProject) {
+                saveProject();
+            }
+        }, 30000);
+
+        // --- TOC PREVIEW STYLE ---
+        function updateTOCPreview() {
+            if (!currentProject) {
+                const container = document.getElementById('tocPreview');
+                if (container) {
+                    container.innerHTML = '<small class="text-muted">Select a project to see TOC</small>';
+                }
+                return;
+            }
+            const toc = generateTOC();
+            const pageMap = calculatePageNumbers();
+            const container = document.getElementById('tocPreview');
+            if (!container) return;
+            container.innerHTML = '';
+            // Add page summary
+            const totalPages = pageMap.length ? pageMap[pageMap.length - 1] : '';
+            container.innerHTML += `<div class="mb-2"><strong>Estimated Pages:</strong> <span class="text-muted">${totalPages || ''} total</span></div>`;
+            // TOC Title
+            container.innerHTML += `<div style="font-size:1.3em;font-weight:bold;color:var(--primary-color);margin-bottom:8px;">Table of Contents</div>`;
+            // TOC Items with page numbers
+            toc.forEach((item, idx) => {
+                container.innerHTML += `<div class="toc-item level-${item.level}" data-path="${item.path}" style="padding-left:${(item.level - 1) * 16}px; cursor:pointer;"><span style="font-weight:bold;">${item.number}.</span> ${escapeHtml(item.title)}<span class="text-muted ms-1 float-end">${pageMap[idx] || ''}</span></div>`;
+            });
+            // Add click handler for TOC navigation
+            container.onclick = function(e) {
+                const item = e.target.closest('.toc-item[data-path]');
+                if (item) {
+                    const section = document.getElementById('section-' + item.dataset.path);
+                    if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }
+            };
+        }
+
+
+
+        // Header/Footer Modal logic
+        function showHeaderFooterModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            // Load from localStorage or project
+            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            let projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
+            document.getElementById('headerContent').value = projectHeaderFooter.header || '';
+            document.getElementById('footerContent').value = projectHeaderFooter.footer || '';
+            const modal = new bootstrap.Modal(document.getElementById('headerFooterModal'));
+            modal.show();
+        }
+        function saveHeaderFooter() {
+            if (!currentProject) return;
+            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            headerFooter[currentProject.id] = {
+                header: document.getElementById('headerContent').value,
+                footer: document.getElementById('footerContent').value
+            };
+            safeSetItem('bytedraft_header_footer', JSON.stringify(headerFooter));
+            bootstrap.Modal.getInstance(document.getElementById('headerFooterModal')).hide();
+        }
+        // --- Update content capture for export ---
+        // Before exporting, walk all sections and subsections recursively and update their .content from TinyMCE:
+        function updateAllSectionContents() {
+          function updateNodeContent(node, path) {
+            const editorId = `editor-${path.join('-')}`;
+            const editor = tinymce.get(editorId);
+            if (editor) {
+              node.content = editor.getContent();
+            }
+            if (node.subsections && node.subsections.length > 0) {
+              node.subsections.forEach((sub, idx) => {
+                updateNodeContent(sub, path.concat(idx));
+              });
+            }
+          }
+          if (currentProject && currentProject.sections) {
+            currentProject.sections.forEach((section, idx) => {
+              updateNodeContent(section, [idx]);
+            });
+          }
+        }
+        // Call updateAllSectionContents() before any export or saveProject() call.
+
+
+
+
+        
+
+        
+
+        
+
+        
+        
+        
+        
+        
+
+        // JSON Export and Import Functions
+        function exportProjectAsJSON(projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (!project) {
+                alert('Project not found');
+                return;
+            }
+
+            // Get additional project data from localStorage
+            const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+            const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+            const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+
+            // Filter version history for this specific project
+            const projectVersionHistory = allVersionHistory.filter(v => v.projectId === projectId);
+
+            // Create a clean copy of the project for export
+            const exportData = {
+                ...project,
+                documentInfo: allDocInfo[projectId] || {},
+                customChangelog: allCustomChangelog[projectId] || {},
+                headerFooter: allHeaderFooter[projectId] || {},
+                versionHistory: projectVersionHistory,
+                logo: allLogos[projectId] || null,
+                pageSettings: allPageSettings[projectId] || {},
+                exportedAt: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const jsonString = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            downloadFile(blob, `${project.name.replace(/[^a-z0-9]/gi, '_')}.json`);
+        }
+
+        function importProjectFromJSON() {
+            document.getElementById('jsonImportInput').click();
+        }
+
+        function handleJSONImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importData = JSON.parse(e.target.result);
+                    
+                    // Validate the imported data
+                    if (!importData.name || !importData.sections) {
+                        alert('Invalid project file: Missing required fields (name, sections)');
+                        return;
+                    }
+
+                    // Check if project with same name already exists
+                    const existingProject = projects.find(p => p.name === importData.name);
+                    if (existingProject) {
+                        const newName = prompt(`A project named "${importData.name}" already exists. Please enter a new name:`, `${importData.name}_imported`);
+                        if (!newName || newName.trim() === '') {
+                            return;
+                        }
+                        importData.name = newName.trim();
+                    }
+
+                    // Generate new ID and timestamps for the imported project
+                    const importedProject = {
+                        ...importData,
+                        id: Date.now().toString(),
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                        importedAt: new Date().toISOString()
+                    };
+
+                    // Remove export-specific fields
+                    delete importedProject.exportedAt;
+                    delete importedProject.version;
+
+                    // Extract additional data before removing it from the project object
+                    const documentInfo = importedProject.documentInfo || {};
+                    const importedCustomChangelog = importedProject.customChangelog || {};
+                    const headerFooter = importedProject.headerFooter || {};
+                    const importedVersionHistory = importedProject.versionHistory || [];
+                    const importedLogo = importedProject.logo || null;
+                    const importedPageSettings = importedProject.pageSettings || {};
+
+                    // Remove additional data from the project object
+                    delete importedProject.documentInfo;
+                    delete importedProject.customChangelog;
+                    delete importedProject.headerFooter;
+                    delete importedProject.versionHistory;
+                    delete importedProject.logo;
+                    delete importedProject.pageSettings;
+
+                    // Add to projects array
+                    projects.push(importedProject);
+                    
+                    // Save additional data to localStorage
+                    const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+                    const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+                    const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+                    const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+                    const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+                    const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+
+                    allDocInfo[importedProject.id] = documentInfo;
+                    // Migrate imported changelog from possible double-encoded format
+                    if (typeof importedCustomChangelog === 'string') {
+                        try { allCustomChangelog[importedProject.id] = JSON.parse(importedCustomChangelog); }
+                        catch(e) { allCustomChangelog[importedProject.id] = []; }
+                    } else {
+                        allCustomChangelog[importedProject.id] = importedCustomChangelog;
+                    }
+                    allHeaderFooter[importedProject.id] = headerFooter;
+                    if (importedLogo) {
+                        allLogos[importedProject.id] = importedLogo;
+                    }
+                    allPageSettings[importedProject.id] = importedPageSettings;
+
+                    // Update version history entries with new project ID
+                    const updatedVersionHistory = importedVersionHistory.map(v => ({
+                        ...v,
+                        projectId: importedProject.id
+                    }));
+                    allVersionHistory.push(...updatedVersionHistory);
+
+                    safeSetItem('bytedraft_docinfo', JSON.stringify(allDocInfo));
+                    safeSetItem('bytedraft_custom_changelog', JSON.stringify(allCustomChangelog));
+                    safeSetItem('bytedraft_header_footer', JSON.stringify(allHeaderFooter));
+                    safeSetItem('bytedraft_versions', JSON.stringify(allVersionHistory));
+                    safeSetItem('bytedraft_logos', JSON.stringify(allLogos));
+                    safeSetItem('bytedraft_page_settings', JSON.stringify(allPageSettings));
+                    
+                    // Save to localStorage
+                    saveProjects();
+                    
+                    // Refresh the UI
+                    renderProjects();
+                    
+                    // Select the newly imported project
+                    selectProject(importedProject.id);
+                    
+                    // Refresh the global variables to include the imported data
+                    customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+                    versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+                    
+                    // Update the document info display if the modal is open
+                    const docInfoModal = document.getElementById('documentInfoModal');
+                    if (docInfoModal && bootstrap.Modal.getInstance(docInfoModal) && bootstrap.Modal.getInstance(docInfoModal)._isShown) {
+                        loadDocumentInfo();
+                    }
+                    
+                    // Update the changelog display if the modal is open
+                    const changelogModal = document.getElementById('customChangelogModal');
+                    if (changelogModal && bootstrap.Modal.getInstance(changelogModal) && bootstrap.Modal.getInstance(changelogModal)._isShown) {
+                        renderChangelogTable();
+                    }
+                    
+                    // Update the version history display if the modal is open
+                    const versionHistoryModal = document.getElementById('versionHistoryModal');
+                    if (versionHistoryModal && bootstrap.Modal.getInstance(versionHistoryModal) && bootstrap.Modal.getInstance(versionHistoryModal)._isShown) {
+                        showVersionHistory();
+                    }
+                    
+                    alert(`Project "${importedProject.name}" imported successfully!`);
+                    
+                } catch (error) {
+                    console.error('Error importing project:', error);
+                    alert('Error importing project: Invalid JSON file');
+                }
+            };
+            
+            reader.readAsText(file);
+            
+            // Reset the file input
+            event.target.value = '';
+        }
+
+        // Document Info Table Storage Helpers
+        function getDocumentInfo(projectId) {
+            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            return allInfo[projectId] || {
+                title: '',
+                author: '',
+                docOwner: '',
+                procOwner: '',
+                version: '',
+                effDate: '',
+                lastRev: '',
+                nextRev: '',
+                link: ''
+            };
+        }
+        function setDocumentInfo(projectId, info) {
+            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            allInfo[projectId] = info;
+            safeSetItem('bytedraft_docinfo', JSON.stringify(allInfo));
+        }
+        function showDocumentInfoModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            const info = getDocumentInfo(currentProject.id);
+            document.getElementById('docInfoTitle').value = info.title || '';
+            document.getElementById('docInfoAuthor').value = info.author || '';
+            document.getElementById('docInfoDocOwner').value = info.docOwner || '';
+            document.getElementById('docInfoProcOwner').value = info.procOwner || '';
+            document.getElementById('docInfoVersion').value = info.version || '';
+            document.getElementById('docInfoEffDate').value = info.effDate || '';
+            document.getElementById('docInfoLastRev').value = info.lastRev || '';
+            document.getElementById('docInfoNextRev').value = info.nextRev || '';
+            document.getElementById('docInfoLink').value = info.link || '';
+            new bootstrap.Modal(document.getElementById('documentInfoModal')).show();
+        }
+        function saveDocumentInfo() {
+            if (!currentProject) return;
+            const info = {
+                title: document.getElementById('docInfoTitle').value,
+                author: document.getElementById('docInfoAuthor').value,
+                docOwner: document.getElementById('docInfoDocOwner').value,
+                procOwner: document.getElementById('docInfoProcOwner').value,
+                version: document.getElementById('docInfoVersion').value,
+                effDate: document.getElementById('docInfoEffDate').value,
+                lastRev: document.getElementById('docInfoLastRev').value,
+                nextRev: document.getElementById('docInfoNextRev').value,
+                link: document.getElementById('docInfoLink').value
+            };
+            setDocumentInfo(currentProject.id, info);
+            bootstrap.Modal.getInstance(document.getElementById('documentInfoModal')).hide();
+        }
+
+
+
+        // Restore generateTOC function for TOC preview and exports
+        function generateTOC() {
+            if (!currentProject || !currentProject.sections) return [];
+            const toc = [];
+            function walk(node, numberParts, level, path) {
+                toc.push({
+                    level: level,
+                    number: numberParts.join('.'),
+                    title: node.title,
+                    page: '', // Page calculation can be added later
+                    path: path.join('-')
+                });
+                if (node.subsections && node.subsections.length > 0) {
+                    node.subsections.forEach((sub, idx) => {
+                        walk(sub, numberParts.concat(idx + 1), level + 1, path.concat(idx));
+                    });
+                }
+            }
+            currentProject.sections.forEach((section, idx) => {
+                walk(section, [idx + 1], 1, [idx]);
+            });
+            return toc;
+        }
+
+        function calculatePageNumbers() {
+            const toc = generateTOC();
+            if (!currentProject || !toc.length) return toc.map(() => '');
+
+            const settings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const ps = settings[currentProject.id] || {};
+            const charsPerLine = parseInt(ps.charsPerLine) || 80;
+            const linesPerPage = parseInt(ps.linesPerPage) || 40;
+            const charsPerPage = charsPerLine * linesPerPage;
+
+            let cumulativeChars = 0;
+            const startPage = 4; // after title page, changelog, TOC
+
+            return toc.map(item => {
+                const pathArray = item.path.split('-').map(Number);
+                const node = getNodeByPath(pathArray);
+                const pageNum = startPage + Math.floor(cumulativeChars / charsPerPage);
+                cumulativeChars += (node?.content || '').replace(/<[^>]*>/g, '').length;
+                return pageNum;
+            });
+        }
+
+
+        function renderChangelogTable() {
+            const projectId = currentProject?.id;
+            let data = customChangelog[projectId] || [];
+            const tbody = document.getElementById('changelogTableBody');
+            tbody.innerHTML = '';
+            if (!data.length) data = [{version:'', date:'', author:'', reviewer:'', approver:'', desc:''}];
+            data.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="text" class="form-control form-control-sm" value="${escapeHtml(row.version||'')}" onchange="updateChangelogCell(${idx},'version',this.value)"></td>
+                    <td><input type="date" class="form-control form-control-sm" value="${escapeHtml(row.date||'')}" onchange="updateChangelogCell(${idx},'date',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${escapeHtml(row.author||'')}" onchange="updateChangelogCell(${idx},'author',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${escapeHtml(row.reviewer||'')}" onchange="updateChangelogCell(${idx},'reviewer',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${escapeHtml(row.approver||'')}" onchange="updateChangelogCell(${idx},'approver',this.value)"></td>
+                    <td><input type="text" class="form-control form-control-sm" value="${escapeHtml(row.desc||'')}" onchange="updateChangelogCell(${idx},'desc',this.value)"></td>
+                    <td><button class="btn btn-sm btn-danger" onclick="removeChangelogRow(${idx})"><i class="fas fa-trash"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        function addChangelogRow() {
+            const projectId = currentProject?.id;
+            let data = customChangelog[projectId] || [];
+            data.push({version:'', date:'', author:'', reviewer:'', approver:'', desc:''});
+            customChangelog[projectId] = data;
+            // Save to localStorage immediately
+            safeSetItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
+            renderChangelogTable();
+        }
+        function removeChangelogRow(idx) {
+            const projectId = currentProject?.id;
+            let data = customChangelog[projectId] || [];
+            data.splice(idx, 1);
+            customChangelog[projectId] = data;
+            // Save to localStorage immediately
+            safeSetItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
+            renderChangelogTable();
+        }
+        function updateChangelogCell(idx, key, value) {
+            const projectId = currentProject?.id;
+            let data = customChangelog[projectId] || [];
+            if (!data[idx]) data[idx] = {version:'', date:'', author:'', reviewer:'', approver:'', desc:''};
+            data[idx][key] = value;
+            customChangelog[projectId] = data;
+            // Save to localStorage immediately
+            safeSetItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
+        }
+        function saveCustomChangelogTable() {
+            // Ensure data is saved to localStorage
+            if (currentProject) {
+                safeSetItem('bytedraft_custom_changelog', JSON.stringify(customChangelog));
+            }
+            bootstrap.Modal.getInstance(document.getElementById('customChangelogModal')).hide();
+            showToast('Changelog saved successfully.', 'success');
+        }
+        function showCustomChangelogModal() {
+            renderChangelogTable();
+            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+        }
+
+
+        // Theme Management
+        let currentTheme = 'light';
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('bytedraft-theme') || 'light';
+            currentTheme = savedTheme;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeToggleButton();
+        }
+
+        function toggleTheme() {
+            saveProject();  // ensure current content is persisted
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            safeSetItem('bytedraft-theme', currentTheme);
+            updateThemeToggleButton();
+            if (currentProject) {
+                renderProjectContent();  // renderSections() inside calls tinymce.remove()
+            }
+        }
+
+        function updateThemeToggleButton() {
+            const themeToggle = document.getElementById('themeToggle');
+            const icon = themeToggle.querySelector('i');
+            if (currentTheme === 'dark') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        }
+
+        function forceThemeRefresh() {
+            // Force a complete re-render of all sections with current theme
+            if (currentProject && window.tinymce && window.tinymce.editors) {
+                const editors = window.tinymce.editors;
+                
+                // Store content from all editors
+                const editorContents = {};
+                editors.forEach(editor => {
+                    const editorId = editor.id;
+                    editorContents[editorId] = editor.getContent();
+                });
+                
+                // Destroy all editors
+                editors.forEach(editor => {
+                    editor.destroy();
+                });
+                
+                // Clear and re-render sections
+                const container = document.getElementById('sectionsContainer');
+                if (container && currentProject.sections) {
+                    container.innerHTML = '';
+                    currentProject.sections.forEach((section, index) => {
+                        renderSubsectionTree(section, [index], container, 0);
+                    });
+                }
+                
+                // Restore content
+                setTimeout(() => {
+                    Object.keys(editorContents).forEach(editorId => {
+                        const editor = window.tinymce.get(editorId);
+                        if (editor) {
+                            editor.setContent(editorContents[editorId]);
+                        }
+                    });
+                }, 200);
+            }
+        }
+
+        // Initialize theme when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            
+            // Add event listener for theme toggle button
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Ensure theme is applied to any existing editors after a short delay
+            setTimeout(() => {
+                if (currentProject && window.tinymce) {
+                    forceThemeRefresh();
+                }
+            }, 500);
+        });
+
+        // Drag and Drop functionality for reordering sections and subsections
+        let draggedElement = null;
+        let draggedPath = null;
+
+        function handleDragStart(e) {
+            // The dragged element is the section itself
+            const sectionElement = e.target;
+            if (!sectionElement || !sectionElement.hasAttribute('data-path')) return;
+            
+            draggedElement = sectionElement;
+            draggedPath = JSON.parse(sectionElement.getAttribute('data-path'));
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', sectionElement.outerHTML);
+            
+            // Add visual feedback to the section
+            sectionElement.style.opacity = '0.5';
+            sectionElement.classList.add('dragging');
+            
+            // Set the drag image
+            e.dataTransfer.setDragImage(sectionElement, 0, 0);
+            
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Add visual feedback for drop zones
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement && targetElement !== draggedElement) {
+                // Remove any existing drop classes
+                targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+                
+                // Determine drop action based on position
+                const rect = targetElement.getBoundingClientRect();
+                const dropY = e.clientY;
+                const elementCenterY = rect.top + rect.height / 2;
+                const targetPath = JSON.parse(targetElement.getAttribute('data-path'));
+                
+                if (dropY > elementCenterY && targetPath.length === 1) {
+                    // Dropping in lower half of a section - will become child
+                    targetElement.classList.add('drop-as-child');
+                } else if (dropY <= elementCenterY && draggedPath && draggedPath.length > 1 && targetPath.length === 1) {
+                    // Dropping in upper half of a section with a subsection - will become section
+                    targetElement.classList.add('drop-as-section');
+                } else {
+                    // Default drop zone
+                    targetElement.classList.add('drag-over');
+                }
+            }
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement && targetElement !== draggedElement) {
+                targetElement.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            const targetElement = e.target.closest('[data-path]');
+            if (targetElement) {
+                targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            }
+        }
+
+        function handleDragEnd(e) {
+            // Clean up any remaining drag state
+            if (draggedElement) {
+                draggedElement.style.opacity = '';
+                draggedElement.classList.remove('dragging');
+            }
+            
+            // Remove all drop-related classes from all elements
+            document.querySelectorAll('.drag-over, .drop-as-child, .drop-as-section').forEach(el => {
+                el.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            });
+            
+            // Reset drag state
+            draggedElement = null;
+            draggedPath = null;
+            
+            console.log('Drag ended');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Drop event triggered');
+            
+            const targetElement = e.target.closest('[data-path]');
+            if (!targetElement) {
+                console.log('No target element found');
+                return;
+            }
+            
+            if (!draggedElement || !draggedPath) {
+                console.log('No dragged element or path');
+                return;
+            }
+            
+            const targetPath = JSON.parse(targetElement.getAttribute('data-path'));
+            console.log('Target path:', targetPath);
+            
+            // Remove visual feedback
+            draggedElement.style.opacity = '';
+            draggedElement.classList.remove('dragging');
+            targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
+            
+            // Don't allow dropping on itself
+            if (JSON.stringify(draggedPath) === JSON.stringify(targetPath)) {
+                console.log('Dropping on itself, ignoring');
+                return;
+            }
+            
+            // Determine the intended target based on the drop position
+            const rect = targetElement.getBoundingClientRect();
+            const dropY = e.clientY;
+            const elementCenterY = rect.top + rect.height / 2;
+            
+            // If dropping in the upper half of the target, insert before it
+            // If dropping in the lower half, insert as a child (for sections) or after it (for subsections)
+            let insertAsChild = false;
+            let finalTargetPath = targetPath;
+            
+            if (dropY > elementCenterY) {
+                // Dropping in lower half
+                if (targetPath.length === 1) {
+                    // Dropping on a section - make it a child
+                    insertAsChild = true;
+                    finalTargetPath = targetPath; // Keep the section path, insertAsChild will handle it
+                } else {
+                    // Dropping on a subsection - insert after it
+                    finalTargetPath = [...targetPath.slice(0, -1), targetPath[targetPath.length - 1] + 1];
+                }
+            } else {
+                // Dropping in upper half - insert before the target
+                finalTargetPath = targetPath;
+            }
+            
+            // Special case: if dragging a subsection to a section's upper half, make it a top-level section
+            if (draggedPath.length > 1 && targetPath.length === 1 && dropY <= elementCenterY) {
+                insertAsChild = false;
+                finalTargetPath = targetPath; // This will insert before the target section
+            }
+            
+            // Move the section/subsection
+            console.log('Moving node:', { 
+                sourcePath: draggedPath, 
+                targetPath: finalTargetPath, 
+                insertAsChild,
+                dropY,
+                elementCenterY,
+                dropPosition: dropY > elementCenterY ? 'lower' : 'upper'
+            });
+            
+            moveNodeByPath(draggedPath, finalTargetPath, insertAsChild);
+            
+            // Reset drag state
+            draggedElement = null;
+            draggedPath = null;
+        }
+
+        function moveNodeByPath(sourcePath, targetPath, insertAsChild = false) {
+            if (!currentProject) return;
+            
+            console.log('moveNodeByPath called:', { sourcePath, targetPath, insertAsChild });
+            
+            // Get the source node
+            const sourceNode = getNodeByPath(sourcePath);
+            if (!sourceNode) return;
+            
+            // Special case: if source is a subsection and target is a section, make it a top-level section
+            if (sourcePath.length > 1 && targetPath.length === 1 && !insertAsChild) {
+                console.log('Converting subsection to section level');
+            }
+            
+            // Clean up TinyMCE editors before moving to prevent path conflicts
+            tinymce.remove();
+            
+            // Remove from source location
+            if (sourcePath.length === 1) {
+                // Moving a top-level section
+                currentProject.sections.splice(sourcePath[0], 1);
+            } else {
+                // Moving a subsection
+                const sourceParent = getNodeByPath(sourcePath.slice(0, -1));
+                sourceParent.subsections.splice(sourcePath[sourcePath.length - 1], 1);
+            }
+            
+            // Insert at target location
+            if (insertAsChild && targetPath.length === 1) {
+                // Inserting as a child of a section
+                const targetSection = getNodeByPath(targetPath);
+                if (!targetSection) {
+                    console.error('Target section not found:', targetPath);
+                    return;
+                }
+                if (!targetSection.subsections) {
+                    targetSection.subsections = [];
+                }
+                targetSection.subsections.unshift(sourceNode); // Add as first child
+            } else if (targetPath.length === 1) {
+                // Moving to top-level sections
+                if (targetPath[0] >= currentProject.sections.length) {
+                    // If target index is beyond current sections, append to end
+                    currentProject.sections.push(sourceNode);
+                } else {
+                    currentProject.sections.splice(targetPath[0], 0, sourceNode);
+                }
+            } else if (targetPath.length > 1) {
+                // Moving to subsections
+                const targetParent = getNodeByPath(targetPath.slice(0, -1));
+                if (!targetParent) {
+                    console.error('Target parent not found:', targetPath.slice(0, -1));
+                    return;
+                }
+                if (!targetParent.subsections) {
+                    targetParent.subsections = [];
+                }
+                targetParent.subsections.splice(targetPath[targetPath.length - 1], 0, sourceNode);
+            }
+            
+            console.log('Node moved successfully');
+            
+            // Re-render sections to update the UI with a small delay to ensure TinyMCE cleanup
+            setTimeout(() => {
+                renderSections();
+                // Update TOC to reflect new structure
+                setTimeout(() => updateTOCPreview(), 100);
+            }, 50);
+            
+            // Update project timestamp
+            currentProject.updatedAt = new Date().toISOString();
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
+            toast.textContent = 'Section reordered successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+
+        // Page Settings and Logo Functions
+        function showPageSettings() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            
+            // Load current page settings
+            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const projectSettings = pageSettings[currentProject.id] || {
+                charsPerLine: 80,
+                linesPerPage: 40,
+                headerHeight: 3,
+                paragraphSpacing: 2
+            };
+            
+            document.getElementById('charsPerLine').value = projectSettings.charsPerLine;
+            document.getElementById('linesPerPage').value = projectSettings.linesPerPage;
+            document.getElementById('headerHeight').value = projectSettings.headerHeight;
+            document.getElementById('paragraphSpacing').value = projectSettings.paragraphSpacing;
+            
+            // Load logo
+            loadLogoPreview();
+            
+            new bootstrap.Modal(document.getElementById('pageSettingsModal')).show();
+        }
+
+        function savePageSettings() {
+            if (!currentProject) return;
+            
+            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            pageSettings[currentProject.id] = {
+                charsPerLine: parseInt(document.getElementById('charsPerLine').value),
+                linesPerPage: parseInt(document.getElementById('linesPerPage').value),
+                headerHeight: parseInt(document.getElementById('headerHeight').value),
+                paragraphSpacing: parseInt(document.getElementById('paragraphSpacing').value)
+            };
+            
+            safeSetItem('bytedraft_page_settings', JSON.stringify(pageSettings));
+            
+            // Save logo if exists
+            saveLogo();
+            
+            bootstrap.Modal.getInstance(document.getElementById('pageSettingsModal')).hide();
+            
+            showToast('Page settings saved.', 'success');
+        }
+
+        // Logo Functions
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file (PNG, JPG, GIF)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const logoData = e.target.result;
+                displayLogoPreview(logoData);
+                
+                // Store logo data
+                const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+                logoStorage[currentProject.id] = logoData;
+                safeSetItem('bytedraft_logos', JSON.stringify(logoStorage));
+                
+                console.log('Logo uploaded and stored for project:', currentProject.id);
+                console.log('Logo data length:', logoData.length);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayLogoPreview(logoData) {
+            const preview = document.getElementById('logoPreview');
+            const removeBtn = document.getElementById('removeLogoBtn');
+            
+            preview.innerHTML = `<img src="${logoData}" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
+            removeBtn.style.display = 'block';
+        }
+
+        function loadLogoPreview() {
+            if (!currentProject) return;
+            
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const logoData = logoStorage[currentProject.id];
+            
+            console.log('Loading logo preview for project:', currentProject.id);
+            console.log('Logo data found:', !!logoData);
+            
+            if (logoData) {
+                displayLogoPreview(logoData);
+            } else {
+                const preview = document.getElementById('logoPreview');
+                const removeBtn = document.getElementById('removeLogoBtn');
+                
+                preview.innerHTML = '<small class="text-muted">No logo</small>';
+                removeBtn.style.display = 'none';
+            }
+        }
+
+        function removeLogo() {
+            if (!currentProject) return;
+            
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            delete logoStorage[currentProject.id];
+            safeSetItem('bytedraft_logos', JSON.stringify(logoStorage));
+            
+            const preview = document.getElementById('logoPreview');
+            const removeBtn = document.getElementById('removeLogoBtn');
+            
+            preview.innerHTML = '<small class="text-muted">No logo</small>';
+            removeBtn.style.display = 'none';
+            
+            // Clear file input
+            document.getElementById('logoUpload').value = '';
+        }
+
+        function saveLogo() {
+            // Logo is already saved in handleLogoUpload, this function is for consistency
+            // with the savePageSettings flow
+        }
+
+        function getProjectLogo(projectId) {
+            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            return logoStorage[projectId] || null;
+        }

@@ -1488,19 +1488,15 @@ class ModernDocxExporter {
     }
 
     parseFontSize(fontSize) {
-        console.log('parseFontSize called with:', fontSize);
         // Remove spaces and convert to lowercase
         fontSize = fontSize.toLowerCase().replace(/\s/g, '');
-        console.log('Cleaned font size:', fontSize);
         
         // Handle pixel values (px)
         if (fontSize.endsWith('px')) {
             const size = parseInt(fontSize);
-            console.log('Parsed px size:', size);
             if (!isNaN(size)) {
                 // Convert pixels to half-points (1px = 1pt = 2 half-points)
                 const result = Math.round(size * 2);
-                console.log('Converted px to half-points:', result);
                 return result;
             }
         }
@@ -1508,11 +1504,9 @@ class ModernDocxExporter {
         // Handle point values (pt)
         if (fontSize.endsWith('pt')) {
             const size = parseInt(fontSize);
-            console.log('Parsed pt size:', size);
             if (!isNaN(size)) {
                 // Convert points to half-points (1pt = 2 half-points)
                 const result = size * 2;
-                console.log('Converted pt to half-points:', result);
                 return result;
             }
         }
@@ -1587,9 +1581,7 @@ class ModernDocxExporter {
         const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
         const logoData = allLogos[project.id];
         
-        console.log('Logo data found:', !!logoData, 'Project ID:', project.id);
         if (logoData) {
-            console.log('Logo data length:', logoData.length);
         }
         
         // Create title page with proper positioning
@@ -1665,7 +1657,6 @@ class ModernDocxExporter {
                     })
                 );
                 
-                console.log('Logo added successfully to title page');
             } catch (error) {
                 console.warn('Error processing logo:', error);
                 // Fallback to original spacing if logo fails
@@ -2037,8 +2028,6 @@ class ModernDocxExporter {
         const allChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
         const changelogData = allChangelog[project.id] || [];
         
-        console.log('Changelog data type:', typeof changelogData);
-        console.log('Changelog data:', changelogData);
         
         // Ensure changelogData is an array
         const changelogArray = Array.isArray(changelogData) ? changelogData : [];

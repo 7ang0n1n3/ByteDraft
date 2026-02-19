@@ -64,6 +64,26 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Changelog Management**: Professional changelog with version tracking
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
+## 📋 Changelog
+
+### v0.0.43
+- **Refactor**: Extracted all inline JavaScript into `app.js` for cleaner project structure
+- **Security**: Added `escapeHtml()` — all user data interpolated into `innerHTML` is now escaped (XSS prevention)
+- **Fix**: Theme toggle no longer reloads the page; TinyMCE editors are cleanly recycled with the new skin
+- **Fix**: Changelog JSON double-encoding bug — data is now stored as plain arrays, with a migration for existing saves
+- **Fix**: Template preview now uses a Bootstrap modal instead of `alert()`
+- **Fix**: TOC preview now shows estimated page numbers based on configurable chars/line and lines/page settings
+- **Storage**: All `localStorage.setItem` calls wrapped in `safeSetItem()` — quota errors surface as a user-visible toast instead of silently failing
+- **Removed**: Dead code — legacy JSZip/XML DOCX pipeline, dead PDF helpers, debug test functions, flat-index section management
+- **Removed**: Unused script tags — `jszip.min.js`, `highlight.min.js`, `html2canvas.min.js` (~200 KB savings)
+- **Cleanup**: Stripped debug `console.log` spam from editor init, theme toggle, and DOCX export
+- **Refactor**: TinyMCE configuration centralised in `getTinyMCEBaseConfig()` / `buildTinyMCEContentStyle()`
+
+### v0.0.42 and earlier
+See git history.
+
+---
+
 ## 🚀 Getting Started
 
 ### Quick Start
@@ -206,7 +226,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ### Theme System
 - **Dark/Light Mode**: Toggle between themes with local storage persistence
-- **Page Refresh Integration**: Clean theme switching with automatic page refresh for TinyMCE compatibility
+- **No-Reload Switching**: Theme changes apply instantly — TinyMCE editors are cleanly destroyed and recreated with the correct skin without a page reload
 - **Comprehensive Styling**: All UI components properly themed with CSS custom properties
 - **Persistent Settings**: Theme preference saved and restored automatically
 - **Modular CSS**: Well-organized styles with comprehensive documentation and logical sections
@@ -231,13 +251,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Bootstrap 5**: Modern UI framework
 - **Font Awesome**: Icon library
 - **docx**: Modern DOCX generation library
-- **JSZip**: File compression for exports
-- **highlight.js**: Code syntax highlighting with GitHub Dark theme
+- **highlight.js**: Code syntax highlighting with GitHub Dark theme (CSS theme only; runtime highlighting not used)
 
 ### File Structure
 ```
 ByteDraft/
-├── index.html              # Main application
+├── index.html              # Main application shell (HTML + modals)
+├── app.js                  # Application logic
 ├── templates.js            # Document templates
 ├── modernDocxExport.js     # Modern DOCX export module
 ├── libs/                   # External libraries
@@ -245,10 +265,9 @@ ByteDraft/
 │   │   ├── styles.css     # Main application styles
 │   │   └── github-dark.min.css # Code syntax highlighting theme
 │   ├── tinymce/           # TinyMCE editor
-│   ├── bootstrap/         # Bootstrap JS
+│   ├── bootstrap/         # Bootstrap JS + CSS
 │   ├── docx/              # DOCX generation library
-│   ├── fonts/             # Font Awesome icons
-│   └── highlight.min.js   # Code syntax highlighting
+│   └── fonts/             # Font Awesome icons
 └── README.md              # This file
 ```
 
@@ -328,6 +347,6 @@ The modular design allows easy addition of:
 
 ---
 
-**ByteDraft** - Professional documentation made simple 
-**Version** 0.0.42 
-© 2025 - Built for offline productivity 
+**ByteDraft** - Professional documentation made simple
+**Version** 0.0.43
+© 2025 - Built for offline productivity
