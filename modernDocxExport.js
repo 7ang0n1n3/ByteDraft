@@ -739,288 +739,148 @@ class ModernDocxExporter {
         }
     }
 
-    processInlineElements(element) {
+    // processInlineElements walks child nodes and returns an array of TextRun / hyperlink
+    // objects ready to pass as `children` to a docx.Paragraph.
+    //
+    // Formatting is accumulated in `inheritedProps` and passed down the recursion tree
+    // so that every property is present when the TextRun is *constructed* — the docx
+    // library builds its internal XML at construction time and ignores post-construction
+    // property assignments.
+    processInlineElements(element, inheritedProps = {}) {
         const children = [];
-        
+
         Array.from(element.childNodes).forEach(child => {
             if (child.nodeType === Node.TEXT_NODE) {
-                if (child.textContent.trim()) {
-                    children.push(new this.docx.TextRun({ text: child.textContent }));
+                const text = child.textContent;
+                if (text) {
+                    children.push(new this.docx.TextRun({ text, ...inheritedProps }));
                 }
             } else if (child.nodeType === Node.ELEMENT_NODE) {
                 const tagName = child.tagName.toLowerCase();
-                
+
                 switch (tagName) {
                     case 'br':
                         children.push(new this.docx.TextRun({ text: '\n' }));
                         break;
                     case 'strong':
                     case 'b':
-                        // Extract text content and any font-size from child elements
-                        let textContent = child.textContent || child.innerText || '';
-                        let childFontSize = null;
-                        
-                        // Look for font-size in child elements
-                        Array.from(child.childNodes).forEach(grandChild => {
-                            if (grandChild.nodeType === Node.ELEMENT_NODE && grandChild.tagName.toLowerCase() === 'span') {
-                                const spanStyle = grandChild.style || {};
-                                const fontSize = spanStyle.fontSize || spanStyle['font-size'];
-                                if (fontSize) {
-                                    childFontSize = fontSize;
-                                }
-                            }
-                        });
-                        
-                        if (textContent.trim()) {
-                            const textRun = new this.docx.TextRun({ 
-                                text: textContent.trim(), 
-                                bold: true 
-                            });
-                            
-                            // Apply font size if found in child elements
-                            if (childFontSize) {
-                                const size = this.parseFontSize(childFontSize);
-                                if (size) {
-                                    textRun.size = size;
-                                }
-                            }
-                            
-                            children.push(textRun);
-                        }
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, bold: true }));
                         break;
                     case 'em':
                     case 'i':
-                        // Process italic text according to DOCX.js documentation
-                        const italicTextContent = child.textContent || child.innerText || '';
-                        if (italicTextContent.trim()) {
-                            const textRun = new this.docx.TextRun({ 
-                                text: italicTextContent.trim(), 
-                                italics: true // Boolean true for italics as per DOCX.js docs
-                            });
-                            
-                            // Apply font size if specified
-                            const emStyle = child.style || {};
-                            const fontSize = emStyle.fontSize || emStyle['font-size'];
-                            if (fontSize) {
-                                const size = this.parseFontSize(fontSize);
-                                if (size) {
-                                    textRun.size = size;
-                                }
-                            }
-                            
-                            children.push(textRun);
-                        }
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, italics: true }));
                         break;
                     case 'u':
-                        // Process underlined text according to DOCX.js documentation
-                        const underlineTextContent = child.textContent || child.innerText || '';
-                        if (underlineTextContent.trim()) {
-                            const textRun = new this.docx.TextRun({ 
-                                text: underlineTextContent.trim(), 
-                                underline: {
-                                    type: this.docx.UnderlineType.SINGLE,
-                                    color: "000000"
-                                }
-                            });
-                            
-                            // Apply font size if specified
-                            const uStyle = child.style || {};
-                            const fontSize = uStyle.fontSize || uStyle['font-size'];
-                            if (fontSize) {
-                                const size = this.parseFontSize(fontSize);
-                                if (size) {
-                                    textRun.size = size;
-                                }
-                            }
-                            
-                            children.push(textRun);
-                        }
+                        children.push(...this.processInlineElements(child, {
+                            ...inheritedProps,
+                            underline: { type: this.docx.UnderlineType.SINGLE, color: '000000' }
+                        }));
                         break;
                     case 's':
                     case 'strike':
-                        // Process strikethrough text according to DOCX.js documentation
-                        const strikeTextContent = child.textContent || child.innerText || '';
-                        if (strikeTextContent.trim()) {
-                            const textRun = new this.docx.TextRun({ 
-                                text: strikeTextContent.trim(), 
-                                strike: true
-                            });
-                            
-                            // Apply font size if specified
-                            const sStyle = child.style || {};
-                            const fontSize = sStyle.fontSize || sStyle['font-size'];
-                            if (fontSize) {
-                                const size = this.parseFontSize(fontSize);
-                                if (size) {
-                                    textRun.size = size;
-                                }
-                            }
-                            
-                            children.push(textRun);
-                        }
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, strike: true }));
+                        break;
+                    case 'sup':
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, superScript: true }));
+                        break;
+                    case 'sub':
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, subScript: true }));
+                        break;
+                    case 'code':
+                        children.push(...this.processInlineElements(child, {
+                            ...inheritedProps,
+                            font: 'Courier New',
+                            size: inheritedProps.size || 20
+                        }));
+                        break;
+                    case 'mark':
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, highlight: 'yellow' }));
+                        break;
+                    case 'small':
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, size: 16 }));
+                        break;
+                    case 'big':
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, size: 28 }));
                         break;
                     case 'a': {
                         const href = child.getAttribute('href') || '';
                         const linkText = child.textContent || '';
                         if (!linkText.trim()) break;
-                        const linkRun = new this.docx.TextRun({
-                            text: linkText,
-                            color: '0563C1',
-                            underline: { type: 'single' }
-                        });
-                        if (href) {
-                            children.push(new this.docx.ExternalHyperlink({ children: [linkRun], link: href }));
+                        const linkProps = { ...inheritedProps, color: '0563C1', underline: { type: 'single' } };
+                        const linkRuns = this.processInlineElements(child, linkProps);
+                        if (href && linkRuns.length > 0) {
+                            children.push(new this.docx.ExternalHyperlink({ children: linkRuns, link: href }));
                         } else {
-                            children.push(linkRun);
+                            children.push(...linkRuns);
                         }
                         break;
                     }
-                    case 'code':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            font: 'Courier New',
-                            size: 20
-                        }));
+                    case 'img':
+                        // Block-level images are handled by the caller; skip here
                         break;
-                    case 'mark':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            highlight: 'yellow'
-                        }));
-                        break;
-                    case 'sub':
-                    case 'sup': {
-                        const isSuper = tagName === 'sup';
-                        const scriptProp = isSuper ? 'superScript' : 'subScript';
-                        Array.from(child.childNodes).forEach(grandChild => {
-                            if (grandChild.nodeType === Node.TEXT_NODE) {
-                                if (grandChild.textContent.trim()) {
-                                    children.push(new this.docx.TextRun({ text: grandChild.textContent, [scriptProp]: true }));
-                                }
-                            } else if (grandChild.nodeType === Node.ELEMENT_NODE && grandChild.tagName.toLowerCase() === 'a') {
-                                const href = grandChild.getAttribute('href') || '';
-                                const text = grandChild.textContent || '';
-                                if (text.trim()) {
-                                    const run = new this.docx.TextRun({ text, [scriptProp]: true, color: '0563C1', underline: { type: 'single' } });
-                                    children.push(href ? new this.docx.ExternalHyperlink({ children: [run], link: href }) : run);
-                                }
-                            } else if (grandChild.nodeType === Node.ELEMENT_NODE) {
-                                const text = grandChild.textContent || '';
-                                if (text.trim()) {
-                                    children.push(new this.docx.TextRun({ text, [scriptProp]: true }));
-                                }
-                            }
-                        });
+                    case 'span': {
+                        const spanProps = this.extractSpanProps(child);
+                        children.push(...this.processInlineElements(child, { ...inheritedProps, ...spanProps }));
                         break;
                     }
-                    case 'small':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            size: 16 // Smaller font size
-                        }));
-                        break;
-                    case 'big':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            size: 28 // Larger font size
-                        }));
-                        break;
-                                            case 'span':
-                            // Handle span elements with specific styling
-                            const spanStyle = child.style || {};
-                            const fontWeight = spanStyle.fontWeight || spanStyle['font-weight'];
-                            const fontStyle = spanStyle.fontStyle || spanStyle['font-style'];
-                            const textDecoration = spanStyle.textDecoration || spanStyle['text-decoration'];
-                            const verticalAlign = spanStyle.verticalAlign || spanStyle['vertical-align'];
-                            const fontSize = spanStyle.fontSize || spanStyle['font-size'];
-                            
-
-                        
-                        // Process nested formatting within span
-                        const spanChildren = this.processInlineElements(child);
-                        
-                        if (spanChildren.length > 0) {
-                            spanChildren.forEach(textRun => {
-                                // Apply bold if font-weight is bold or 700+
-                                if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
-                                    textRun.bold = true;
-                                }
-                                // Apply italic if font-style is italic
-                                if (fontStyle === 'italic') {
-                                    textRun.italics = true;
-                                }
-                                // Apply underline if text-decoration contains underline
-                                if (textDecoration && textDecoration.includes('underline')) {
-                                    textRun.underline = {
-                                        type: this.docx.UnderlineType.SINGLE,
-                                        color: "000000"
-                                    };
-                                }
-                                // Apply strikethrough if text-decoration contains line-through
-                                if (textDecoration && textDecoration.includes('line-through')) {
-                                    textRun.strike = true;
-                                }
-                                // Apply superscript/subscript based on vertical-align
-                                if (verticalAlign === 'super') {
-                                    textRun.superScript = true;
-                                } else if (verticalAlign === 'sub') {
-                                    textRun.subScript = true;
-                                }
-                                // Apply font size if specified
-                                if (fontSize) {
-                                    const size = this.parseFontSize(fontSize);
-                                    if (size) {
-                                        textRun.size = size;
-                                    }
-                                }
-                            });
-                            children.push(...spanChildren);
-                        } else {
-                            // Create text run with span styling
-                            const textContent = child.textContent || child.innerText || '';
-                            if (textContent.trim()) {
-                                const textRun = new this.docx.TextRun({ text: textContent });
-                                if (fontWeight === 'bold' || fontWeight === '700' || fontWeight === 'bolder') {
-                                    textRun.bold = true;
-                                }
-                                if (fontStyle === 'italic') {
-                                    textRun.italics = true;
-                                }
-                                if (textDecoration && textDecoration.includes('underline')) {
-                                    textRun.underline = {
-                                        type: this.docx.UnderlineType.SINGLE,
-                                        color: "000000"
-                                    };
-                                }
-                                if (textDecoration && textDecoration.includes('line-through')) {
-                                    textRun.strike = true;
-                                }
-                                if (verticalAlign === 'super') {
-                                    textRun.superScript = true;
-                                } else if (verticalAlign === 'sub') {
-                                    textRun.subScript = true;
-                                }
-                                // Apply font size if specified
-                                if (fontSize) {
-                                    const size = this.parseFontSize(fontSize);
-                                    if (size) {
-                                        textRun.size = size;
-                                    }
-                                }
-                                children.push(textRun);
-                            }
-                        }
-                        break;
                     default:
-                        // Recursively process other inline elements
-                        const nestedChildren = this.processInlineElements(child);
-                        children.push(...nestedChildren);
+                        children.push(...this.processInlineElements(child, inheritedProps));
                         break;
                 }
             }
         });
-        
+
         return children;
+    }
+
+    // Extract docx-compatible run properties from a <span> element's inline style.
+    extractSpanProps(span) {
+        const style = span.style || {};
+        const props = {};
+
+        const fontWeight = style.fontWeight || '';
+        if (fontWeight === 'bold' || fontWeight === 'bolder' || parseInt(fontWeight) >= 700) {
+            props.bold = true;
+        }
+
+        const fontStyle = style.fontStyle || '';
+        if (fontStyle === 'italic') {
+            props.italics = true;
+        }
+
+        const textDecoration = style.textDecoration || '';
+        if (textDecoration.includes('underline')) {
+            props.underline = { type: this.docx.UnderlineType.SINGLE, color: '000000' };
+        }
+        if (textDecoration.includes('line-through')) {
+            props.strike = true;
+        }
+
+        const verticalAlign = style.verticalAlign || '';
+        if (verticalAlign === 'super') props.superScript = true;
+        else if (verticalAlign === 'sub') props.subScript = true;
+
+        const fontSize = style.fontSize || '';
+        if (fontSize) {
+            const size = this.parseFontSize(fontSize);
+            if (size) props.size = size;
+        }
+
+        // Text color (TinyMCE outputs rgb() or #hex)
+        const color = style.color || '';
+        if (color) {
+            const hex = this.parseColor(color);
+            if (hex) props.color = hex;
+        }
+
+        // Font family — take the first name in the stack
+        const fontFamily = style.fontFamily || '';
+        if (fontFamily) {
+            const cleanFamily = fontFamily.replace(/['"]/g, '').split(',')[0].trim();
+            if (cleanFamily) props.font = cleanFamily;
+        }
+
+        return props;
     }
 
     getTextAlignment(element) {
@@ -1066,6 +926,94 @@ class ModernDocxExporter {
         });
     }
 
+    // Process the block-level children of a table cell, returning an array of
+    // Paragraph objects for use as TableCell.children.
+    // `defaultAlignment` is the cell-level alignment used when a child paragraph
+    // carries no explicit text-align of its own.
+    processCellContent(cellElement, defaultAlignment) {
+        const paragraphs = [];
+
+        Array.from(cellElement.childNodes).forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                const text = node.textContent.trim();
+                if (text) {
+                    paragraphs.push(new this.docx.Paragraph({
+                        children: [new this.docx.TextRun({ text })],
+                        alignment: defaultAlignment
+                    }));
+                }
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                const tagName = node.tagName.toLowerCase();
+
+                switch (tagName) {
+                    case 'p': {
+                        const runs = this.processInlineElements(node);
+                        if (runs.length > 0) {
+                            // Honour paragraph-level alignment; fall back to cell default
+                            const pStyle = node.style || {};
+                            const pAlign = pStyle.textAlign || pStyle['text-align'] || '';
+                            let alignment = defaultAlignment;
+                            switch (pAlign) {
+                                case 'center':  alignment = this.docx.AlignmentType.CENTER;    break;
+                                case 'right':   alignment = this.docx.AlignmentType.RIGHT;     break;
+                                case 'justify': alignment = this.docx.AlignmentType.JUSTIFIED; break;
+                                case 'left':    alignment = this.docx.AlignmentType.LEFT;      break;
+                            }
+                            paragraphs.push(new this.docx.Paragraph({ children: runs, alignment }));
+                        }
+                        break;
+                    }
+                    case 'ul':
+                    case 'ol': {
+                        const isOrdered = tagName === 'ol';
+                        Array.from(node.children).forEach((li, idx) => {
+                            const runs = this.processInlineElements(li);
+                            const prefix = isOrdered ? `${idx + 1}. ` : '\u2022 ';
+                            const prefixRun = new this.docx.TextRun({ text: prefix });
+                            paragraphs.push(new this.docx.Paragraph({
+                                children: [prefixRun, ...(runs.length > 0 ? runs : [new this.docx.TextRun({ text: li.textContent })])],
+                                indent: { left: 360 },
+                                alignment: defaultAlignment
+                            }));
+                        });
+                        break;
+                    }
+                    case 'h1': case 'h2': case 'h3':
+                    case 'h4': case 'h5': case 'h6': {
+                        const level = parseInt(tagName[1]);
+                        const runs = this.processInlineElements(node);
+                        paragraphs.push(new this.docx.Paragraph({
+                            children: runs.length > 0 ? runs : [new this.docx.TextRun({ text: node.textContent, bold: true })],
+                            heading: this.docx.HeadingLevel[`HEADING_${level}`]
+                        }));
+                        break;
+                    }
+                    case 'img':
+                        this.processImage(node, paragraphs);
+                        break;
+                    case 'br':
+                        paragraphs.push(new this.docx.Paragraph({ children: [new this.docx.TextRun({ text: '' })] }));
+                        break;
+                    default: {
+                        // div, span wrappers, etc. — recurse block-style then fall back to inline
+                        const nested = this.processCellContent(node, defaultAlignment);
+                        if (nested.length > 0) {
+                            paragraphs.push(...nested);
+                        } else {
+                            const runs = this.processInlineElements(node);
+                            if (runs.length > 0) {
+                                paragraphs.push(new this.docx.Paragraph({ children: runs, alignment: defaultAlignment }));
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        });
+
+        return paragraphs;
+    }
+
     processTable(tableElement, elements) {
         const rows = [];
         
@@ -1087,9 +1035,6 @@ class ModernDocxExporter {
                 if (cellElement.hasAttribute('data-colspan-skip')) {
                     return;
                 }
-                
-                // Process cell content with formatting
-                const children = this.processInlineElements(cellElement);
                 
                 // Extract background color and text alignment from style
                 const style = cellElement.getAttribute('style') || '';
@@ -1196,18 +1141,21 @@ class ModernDocxExporter {
                     }
                 }
                 
-                // Create paragraph with proper alignment
-                const paragraph = new this.docx.Paragraph({
-                    children: children.length > 0 ? children : [new this.docx.TextRun({ text: cellElement.textContent })],
-                    alignment: textAlignment
-                });
-                
+                // Build cell paragraphs - block-by-block to preserve lists, headings,
+                // per-paragraph alignment, and embedded images
+                const cellParagraphs = this.processCellContent(cellElement, textAlignment);
+                if (cellParagraphs.length === 0) {
+                    cellParagraphs.push(new this.docx.Paragraph({
+                        children: [new this.docx.TextRun({ text: '' })]
+                    }));
+                }
+
                 // Create table cell with shading on the CELL itself
                 let tableCell;
-                
+
                 // Base cell properties
                 const cellProperties = {
-                    children: [paragraph]
+                    children: cellParagraphs
                 };
                 
                 // Add colspan if greater than 1
@@ -1327,11 +1275,12 @@ class ModernDocxExporter {
                 }
             });
         } else {
-            // No colgroup found, calculate based on actual cells
+            // No colgroup found, calculate based on actual DOM cells
             let maxColumns = 1;
-            if (rows && rows.length > 0) {
-                maxColumns = Math.max(...rows.map(row => row.children ? row.children.length : 1));
-            }
+            tableRows.forEach(tr => {
+                const cellCount = tr.querySelectorAll('td, th').length;
+                if (cellCount > maxColumns) maxColumns = cellCount;
+            });
             columnWidths = Array(maxColumns).fill(100 / maxColumns);
         }
         
@@ -1388,14 +1337,6 @@ class ModernDocxExporter {
                 width: {
                     size: tableWidth,
                     type: widthType
-                },
-                columnWidths: columnWidths,
-                layout: this.docx.TableLayoutType.FIXED,
-                margins: {
-                    top: 100,
-                    bottom: 100,
-                    left: 100,
-                    right: 100
                 },
                 alignment: tableAlignment
             };

@@ -68,6 +68,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.48
+- **Fix**: DOCX table export — tables were silently dropped due to `TableLayoutType` not existing in the loaded docx library version
+- **Fix**: Images inside table cells now export correctly to DOCX
+- **Fix**: Text formatting (bold, italic, color, font size, font family) inside table cells is now preserved in DOCX export — properties are passed via style inheritance so all run properties are set at `TextRun` construction time
+- **Fix**: Bullet and numbered lists inside table cells now export with correct structure and indentation
+- **Fix**: Per-paragraph text alignment (left/center/right/justify) inside table cells is now respected in DOCX export
+
 ### v0.0.47
 - **Fix**: Auto-save no longer logs to revision history — only explicit manual saves create revision entries
 - **Fix**: Project card action buttons (Export, Status, Delete) now render below the project title instead of beside it
@@ -373,5 +380,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.47
+**Version** 0.0.48
 © 2025 - Built for offline productivity
