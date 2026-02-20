@@ -68,6 +68,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.50
+- **Fix**: Font color now exported correctly to DOCX — `extractSpanProps` was calling `this.parseColor()` which doesn't exist (correct method is `convertColorToHex`), causing a silent TypeError that dropped all formatting from colored paragraphs
+- **Fix**: Text background color (highlighting) now exported to DOCX via TextRun shading
+
 ### v0.0.49
 - **Fix**: Paragraph text alignment (left/center/right/justify) outside tables now correctly exported to DOCX — alignment was being set post-construction on the Paragraph object which the docx library ignores
 
@@ -383,5 +387,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.49
+**Version** 0.0.50
 © 2025 - Built for offline productivity

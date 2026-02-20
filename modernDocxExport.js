@@ -829,8 +829,15 @@ class ModernDocxExporter {
         // Text color (TinyMCE outputs rgb() or #hex)
         const color = style.color || '';
         if (color) {
-            const hex = this.parseColor(color);
+            const hex = this.convertColorToHex(color);
             if (hex) props.color = hex;
+        }
+
+        // Background color → TextRun shading (TinyMCE outputs background-color on spans)
+        const bgColor = style.backgroundColor || '';
+        if (bgColor) {
+            const hex = this.convertColorToHex(bgColor);
+            if (hex) props.shading = { fill: hex, val: 'clear' };
         }
 
         // Font family — take the first name in the stack
