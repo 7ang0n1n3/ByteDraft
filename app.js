@@ -158,26 +158,22 @@
                 card.className = `project-card ${currentProject?.id === project.id ? 'active' : ''}`;
                 
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div style="flex: 1; cursor: pointer;" onclick="selectProject('${project.id}')">
-                            <h6 class="mb-1">${escapeHtml(project.name)}</h6>
-                            <small class="text-muted">${escapeHtml(project.description) || 'No description'}</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <button class="btn btn-sm btn-outline-secondary" onclick="exportProjectAsJSON('${project.id}'); event.stopPropagation();" title="Export as JSON">
-                                <i class="fas fa-file-code"></i>
-                            </button>
-                            <select class="status-selector" onchange="updateProjectStatus('${project.id}', this.value)" onclick="event.stopPropagation()">
-                                <option value="draft" ${project.status === 'draft' ? 'selected' : ''}>Draft</option>
-                                <option value="working" ${project.status === 'working' ? 'selected' : ''}>Working</option>
-                                <option value="publish" ${project.status === 'publish' ? 'selected' : ''}>Publish</option>
-                            </select>
-                            <button class="btn-delete" onclick="deleteProject('${project.id}'); event.stopPropagation();" title="Delete Project">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
+                    <h6 class="mb-1" style="cursor: pointer;" onclick="selectProject('${project.id}')">${escapeHtml(project.name)}</h6>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="exportProjectAsJSON('${project.id}'); event.stopPropagation();" title="Export as JSON">
+                            <i class="fas fa-file-code"></i>
+                        </button>
+                        <select class="status-selector" onchange="updateProjectStatus('${project.id}', this.value)" onclick="event.stopPropagation()">
+                            <option value="draft" ${project.status === 'draft' ? 'selected' : ''}>Draft</option>
+                            <option value="working" ${project.status === 'working' ? 'selected' : ''}>Working</option>
+                            <option value="publish" ${project.status === 'publish' ? 'selected' : ''}>Publish</option>
+                        </select>
+                        <button class="btn-delete" onclick="deleteProject('${project.id}'); event.stopPropagation();" title="Delete Project">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted d-block mt-1" style="cursor: pointer;" onclick="selectProject('${project.id}')">${escapeHtml(project.description) || 'No description'}</small>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
                         <small class="text-muted">Updated: ${new Date(project.updatedAt).toLocaleDateString()}</small>
                         <span class="status-badge status-${project.status}">${project.status}</span>
                     </div>
@@ -542,15 +538,25 @@
 
 
 
-        function saveProject() {
+        // Persists project data to storage without creating a revision history entry.
+        // Called by auto-save — never logs to version history.
+        function saveProjectData() {
             if (!currentProject) return;
-            
             const projectIndex = projects.findIndex(p => p.id === currentProject.id);
             if (projectIndex !== -1) {
                 projects[projectIndex] = { ...currentProject };
                 saveProjects();
-                
-                // Add to version history
+            }
+        }
+
+        // Manual save: persists data AND logs a revision history entry.
+        function saveProject() {
+            if (!currentProject) return;
+
+            saveProjectData();
+
+            const projectIndex = projects.findIndex(p => p.id === currentProject.id);
+            if (projectIndex !== -1) {
                 versionHistory.push({
                     id: Date.now().toString(),
                     projectId: currentProject.id,
@@ -558,8 +564,7 @@
                     description: 'Manual save'
                 });
                 saveVersionHistory();
-                
-                // Show success message
+
                 const toast = document.createElement('div');
                 toast.className = 'alert alert-success position-fixed';
                 toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
@@ -862,10 +867,10 @@
             new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
         }
 
-        // Auto-save every 30 seconds
+        // Auto-save every 30 seconds — data only, no revision history entry
         setInterval(() => {
             if (currentProject) {
-                saveProject();
+                saveProjectData();
             }
         }, 30000);
 

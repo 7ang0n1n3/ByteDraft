@@ -59,7 +59,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ### 💾 **Data Management**
 - **Local Storage**: All data stored in your browser (no server required)
-- **Auto-save**: Automatic saving every 30 seconds
+- **Auto-save**: Automatic saving every 30 seconds — silently persists data without creating a revision history entry
 - **Export/Import**: JSON export for backup and sharing with complete project data preservation
 - **Offline Operation**: Works completely without internet connection
 - **Document Information**: Custom document metadata fields
@@ -67,6 +67,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v0.0.47
+- **Fix**: Auto-save no longer logs to revision history — only explicit manual saves create revision entries
+- **Fix**: Project card action buttons (Export, Status, Delete) now render below the project title instead of beside it
 
 ### v0.0.46
 - **Feature**: Section annotations — each section and subsection has a comment button (speech bubble icon); click to open a modal where you can add, resolve, unresolve, and delete review notes
@@ -209,8 +213,8 @@ See git history.
 - **Professional Categories**: Security, compliance, technical, and business templates
 
 ### Version Control
-- **Automatic Tracking**: Every save creates a version entry
-- **Manual Saves**: Explicit saves are tracked separately
+- **Manual Saves Only**: Revision history entries are created only on explicit manual saves
+- **Silent Auto-save**: Auto-save persists data every 30 seconds without polluting the revision log
 - **Status Changes**: Document status updates are logged
 - **Export History**: Track when documents were exported
 - **Data Persistence**: Version history preserved in JSON exports and imports
@@ -369,5 +373,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.46
+**Version** 0.0.47
 © 2025 - Built for offline productivity
