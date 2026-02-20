@@ -68,6 +68,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.51
+- **Fix**: Font color and font-family now correctly exported to DOCX — `cleanContentForDocx` was stripping `color` and `font-family` properties when rebuilding span styles, so they never reached the export pipeline
+
 ### v0.0.50
 - **Fix**: Font color now exported correctly to DOCX — `extractSpanProps` was calling `this.parseColor()` which doesn't exist (correct method is `convertColorToHex`), causing a silent TypeError that dropped all formatting from colored paragraphs
 - **Fix**: Text background color (highlighting) now exported to DOCX via TextRun shading
@@ -387,5 +390,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.50
+**Version** 0.0.51
 © 2025 - Built for offline productivity

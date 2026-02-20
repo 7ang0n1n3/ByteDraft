@@ -300,7 +300,19 @@ class ModernDocxExporter {
             if (textDecorationMatch) {
                 cleanStyle += textDecorationMatch[0].trim() + ' ';
             }
-            
+
+            // Preserve color (use anchored match to avoid matching background-color)
+            const colorMatch = style.match(/(?:^|;)\s*color\s*:\s*([^;]+)/);
+            if (colorMatch) {
+                cleanStyle += `color: ${colorMatch[1].trim()}; `;
+            }
+
+            // Preserve font-family
+            const fontFamilyMatch = style.match(/font-family\s*:\s*[^;]+;?/);
+            if (fontFamilyMatch) {
+                cleanStyle += fontFamilyMatch[0].trim() + ' ';
+            }
+
             // Update the span style
             if (cleanStyle.trim()) {
                 span.setAttribute('style', cleanStyle.trim());
