@@ -524,75 +524,35 @@ class ModernDocxExporter {
                         spacing: { before: 100, after: 100 }
                     }));
                     break;
-                case 'p':
-                    // Check if paragraph contains images
+                case 'p': {
+                    const textAlign = this.getTextAlignment(node);
                     const imgElements = node.querySelectorAll('img');
                     if (imgElements.length > 0) {
-
-                        
                         // Process each image in the paragraph
                         imgElements.forEach(img => {
                             this.processImage(img, elements);
                         });
-                        
-                        // Also process any text content in the paragraph
-                        const textContent = node.textContent.trim();
-                        if (textContent) {
-                            const children = this.processInlineElements(node);
-                            if (children.length > 0) {
-                                const paragraph = new this.docx.Paragraph({ 
-                                    children: children,
-                                    spacing: { after: 200 }
-                                });
-                                
-                                // Handle text alignment
-                                const textAlign = this.getTextAlignment(node);
-                                if (textAlign) {
-                                    paragraph.alignment = textAlign;
-                                }
-                                
-                                // Handle font size from paragraph style
-                                const paragraphStyle = node.style || {};
-                                const fontSize = paragraphStyle.fontSize || paragraphStyle['font-size'];
-                                if (fontSize && children.length === 1 && children[0] instanceof this.docx.TextRun) {
-                                    const size = this.parseFontSize(fontSize);
-                                    if (size) {
-                                        children[0].size = size;
-                                    }
-                                }
-                                
-                                elements.push(paragraph);
-                            }
-                        }
-                    } else if (node.textContent.trim()) {
-                        // Handle paragraphs with only text content and formatting
+                        // Also push any inline text from the paragraph
                         const children = this.processInlineElements(node);
                         if (children.length > 0) {
-                            const paragraph = new this.docx.Paragraph({ 
-                                children: children,
+                            elements.push(new this.docx.Paragraph({
+                                children,
+                                alignment: textAlign,
                                 spacing: { after: 200 }
-                            });
-                            
-                            // Handle text alignment
-                            const textAlign = this.getTextAlignment(node);
-                            if (textAlign) {
-                                paragraph.alignment = textAlign;
-                            }
-                            
-                            // Handle font size from paragraph style
-                            const paragraphStyle = node.style || {};
-                            const fontSize = paragraphStyle.fontSize || paragraphStyle['font-size'];
-                            if (fontSize && children.length === 1 && children[0] instanceof this.docx.TextRun) {
-                                const size = this.parseFontSize(fontSize);
-                                if (size) {
-                                    children[0].size = size;
-                                }
-                            }
-                            
-                            elements.push(paragraph);
+                            }));
+                        }
+                    } else if (node.textContent.trim()) {
+                        const children = this.processInlineElements(node);
+                        if (children.length > 0) {
+                            elements.push(new this.docx.Paragraph({
+                                children,
+                                alignment: textAlign,
+                                spacing: { after: 200 }
+                            }));
                         }
                     }
                     break;
+                }
                 case 'ul':
                 case 'ol':
                     this.processList(node, elements);

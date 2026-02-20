@@ -68,6 +68,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.49
+- **Fix**: Paragraph text alignment (left/center/right/justify) outside tables now correctly exported to DOCX — alignment was being set post-construction on the Paragraph object which the docx library ignores
+
 ### v0.0.48
 - **Fix**: DOCX table export — tables were silently dropped due to `TableLayoutType` not existing in the loaded docx library version
 - **Fix**: Images inside table cells now export correctly to DOCX
@@ -380,5 +383,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.48
+**Version** 0.0.49
 © 2025 - Built for offline productivity
