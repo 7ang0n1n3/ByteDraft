@@ -1060,52 +1060,11 @@ class ModernDocxExporter {
                     }
                 }
                 
-                // If no background color found on the cell itself, check child elements (spans)
-                if (bgColor === 'FFFFFF') {
-                    const childElements = cellElement.querySelectorAll('*');
-                    for (let child of childElements) {
-                        const childStyle = child.getAttribute('style') || '';
-                        if (childStyle.includes('background-color') || childStyle.includes('background:')) {
-                            // Pattern 1: background-color: #RRGGBB
-                            let childBgMatch = childStyle.match(/background-color:\s*(#[0-9a-fA-F]{6})/i);
-                            if (childBgMatch) {
-                                bgColor = childBgMatch[1];
-                                break;
-                            } else {
-                                // Pattern 2: background-color: #RGB
-                                childBgMatch = childStyle.match(/background-color:\s*(#[0-9a-fA-F]{3})/i);
-                                if (childBgMatch) {
-                                    bgColor = childBgMatch[1];
-                                    break;
-                                } else {
-                                    // Pattern 3: background-color: rgb(r, g, b)
-                                    childBgMatch = childStyle.match(/background-color:\s*rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
-                                    if (childBgMatch) {
-                                        const r = parseInt(childBgMatch[1]).toString(16).padStart(2, '0');
-                                        const g = parseInt(childBgMatch[2]).toString(16).padStart(2, '0');
-                                        const b = parseInt(childBgMatch[3]).toString(16).padStart(2, '0');
-                                        bgColor = `#${r}${g}${b}`;
-                                        break;
-                                    } else {
-                                        // Pattern 4: background: #RRGGBB
-                                        childBgMatch = childStyle.match(/background:\s*(#[0-9a-fA-F]{6})/i);
-                                        if (childBgMatch) {
-                                            bgColor = childBgMatch[1];
-                                            break;
-                                        } else {
-                                            // Pattern 5: background: #RGB
-                                            childBgMatch = childStyle.match(/background:\s*(#[0-9a-fA-F]{3})/i);
-                                            if (childBgMatch) {
-                                                bgColor = childBgMatch[1];
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                // Note: do NOT scan child elements for background-color here.
+                // Child spans with background-color represent text highlighting
+                // (character-level shading) and are handled by extractSpanProps →
+                // TextRun.shading. Scanning children would incorrectly paint the
+                // entire cell with a highlight color.
                 
                 // Extract text alignment
                 let textAlignment = this.docx.AlignmentType.LEFT; // default

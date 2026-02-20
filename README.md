@@ -68,6 +68,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.53
+- **Fix**: Applying text color or highlight inside a table cell no longer colors the entire cell — child-element background-color scanning in `processTable` was picking up text-highlight spans and applying them as cell shading; cell background is now read only from the `<td>` element's own style
+
 ### v0.0.52
 - **Fix**: Font color and background highlight now correctly exported — a second style-cleaning pass in `cleanContentForDocx` was explicitly stripping `color`, `background-color`, and `font-family` from all non-table elements after the first pass had preserved them; second pass now only removes layout-only properties (margin, padding, display, float, position)
 
@@ -393,5 +396,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.52
+**Version** 0.0.53
 © 2025 - Built for offline productivity
