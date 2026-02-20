@@ -58,7 +58,32 @@
             renderProjects();
             renderTemplates();
             renderCustomFields();
+            initSidebarCollapse();
         });
+
+        function toggleSidebarSection(key) {
+            const body = document.getElementById(`sidebar-${key}-body`);
+            const chevron = document.getElementById(`chevron-${key}`);
+            if (!body) return;
+            const isCollapsed = body.style.display === 'none';
+            body.style.display = isCollapsed ? '' : 'none';
+            if (chevron) chevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+            const states = JSON.parse(localStorage.getItem('bytedraft_sidebar_collapse') || '{}');
+            states[key] = !isCollapsed;
+            safeSetItem('bytedraft_sidebar_collapse', JSON.stringify(states));
+        }
+
+        function initSidebarCollapse() {
+            const states = JSON.parse(localStorage.getItem('bytedraft_sidebar_collapse') || '{}');
+            ['projects', 'toc', 'templates', 'fields'].forEach(key => {
+                if (states[key] === true) {
+                    const body = document.getElementById(`sidebar-${key}-body`);
+                    const chevron = document.getElementById(`chevron-${key}`);
+                    if (body) body.style.display = 'none';
+                    if (chevron) chevron.style.transform = 'rotate(-90deg)';
+                }
+            });
+        }
 
         // Project Management
         function createProject() {
@@ -274,6 +299,12 @@
                 a {
                     color: #0d6efd;
                 }
+                .xref {
+                    color: #2563eb;
+                    text-decoration: underline;
+                    cursor: default;
+                    font-style: italic;
+                }
             `;
         }
 
@@ -293,7 +324,7 @@
                 ],
                 toolbar: [
                     'undo redo | formatselect | bold italic underline strikethrough',
-                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help'
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref'
                 ].join(' | '),
                 font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
                 font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
@@ -327,12 +358,13 @@
         function renderSubsectionTree(node, path, parentContainer, depth) {
             const numberStr = path.map(i => i + 1).join('.');
             const nodeDiv = document.createElement('div');
-            nodeDiv.className = depth === 0 ? 'section-item' : 'subsection-item';
+            const lockedClass = node.locked ? ' section-locked' : '';
+            nodeDiv.className = (depth === 0 ? 'section-item' : 'subsection-item') + lockedClass;
             nodeDiv.style.marginLeft = '';
             nodeDiv.style.marginBottom = '16px';
             nodeDiv.setAttribute('id', `section-${path.join('-')}`);
             nodeDiv.setAttribute('data-path', JSON.stringify(path));
-            nodeDiv.setAttribute('draggable', 'true');
+            nodeDiv.setAttribute('draggable', node.locked ? 'false' : 'true');
             
             // Add drag and drop event listeners
             nodeDiv.addEventListener('dragstart', handleDragStart);
@@ -342,25 +374,41 @@
             nodeDiv.addEventListener('dragleave', handleDragLeave);
             nodeDiv.addEventListener('dragend', handleDragEnd);
             
+            const pk = path.join('-');
             nodeDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-1" style="justify-content: space-between;">
                   <div class="d-flex align-items-center" style="gap: 8px;">
-                    <div class="drag-handle" style="cursor: grab; padding: 4px; color: #6c757d;" draggable="true">
+                    <div id="draghandle-${pk}" class="drag-handle" draggable="true"
+                        style="cursor:${node.locked ? 'not-allowed' : 'grab'}; padding:4px; color:#6c757d; opacity:${node.locked ? '0.3' : '1'}; ${node.locked ? 'pointer-events:none;' : ''}">
                         <i class="fas fa-grip-vertical"></i>
                     </div>
-                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(node.title)}" style="width: 220px;"
+                    <input id="titleinput-${pk}" type="text" class="form-control form-control-sm"
+                        value="${escapeHtml(node.title)}" style="width: 220px;"
+                        ${node.locked ? 'disabled' : ''}
                         onchange="updateSubsectionTitleByPath(${JSON.stringify(path)}, this.value)">
-                    <button class="btn btn-sm btn-outline-danger btn-icon" onclick="removeSubsectionByPath(${JSON.stringify(path)})">
+                    <button id="deletebtn-${pk}" class="btn btn-sm btn-outline-danger btn-icon"
+                        ${node.locked ? 'disabled' : ''}
+                        onclick="removeSubsectionByPath(${JSON.stringify(path)})">
                         <i class="fas fa-trash"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-primary btn-icon" onclick="addSubsectionByPath(${JSON.stringify(path)})">
+                    <button id="addbtn-${pk}" class="btn btn-sm btn-outline-primary btn-icon"
+                        ${node.locked ? 'disabled' : ''}
+                        onclick="addSubsectionByPath(${JSON.stringify(path)})">
                         <i class="fas fa-plus"></i> Sub-section
                     </button>
+                    <button id="lockbtn-${pk}" class="btn btn-sm ${node.locked ? 'btn-warning' : 'btn-outline-secondary'} btn-icon"
+                        title="${node.locked ? 'Unlock section' : 'Lock section'}"
+                        onclick="toggleSectionLock(${JSON.stringify(path)})">
+                        <i class="fas fa-${node.locked ? 'lock' : 'lock-open'}"></i>
+                    </button>
                   </div>
-                  <span class="badge bg-secondary" style="font-size: 1em;">${numberStr}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <span id="wc-${pk}" class="text-muted" style="font-size:0.75em; white-space:nowrap;"></span>
+                    <span class="badge bg-secondary" style="font-size: 1em;">${numberStr}</span>
+                  </div>
                 </div>
-                <textarea id="editor-${path.join('-')}" class="tinymce-editor"></textarea>
-                <div id="subsections-${path.join('-')}" class="subsections-container"></div>
+                <textarea id="editor-${pk}" class="tinymce-editor"></textarea>
+                <div id="subsections-${pk}" class="subsections-container"></div>
             `;
             parentContainer.appendChild(nodeDiv);
             
@@ -376,13 +424,40 @@
             tinymce.init({
                 ...getTinyMCEBaseConfig(`#editor-${path.join('-')}`, isDarkTheme),
                 setup: function(editor) {
+                    editor.ui.registry.addButton('citations', {
+                        text: '[Cite]',
+                        tooltip: 'Insert citation',
+                        onAction: function() {
+                            window._activeCitationEditor = editor;
+                            showCitationManagerModal();
+                        }
+                    });
+                    editor.ui.registry.addButton('xref', {
+                        text: '[XRef]',
+                        tooltip: 'Insert cross-reference to another section',
+                        onAction: function() {
+                            window._activeXRefEditor = editor;
+                            showCrossRefModal();
+                        }
+                    });
+                    editor.on('BeforeExecCommand', function(e) {
+                        if (e.command === 'mceFullScreen' && node.locked) {
+                            e.preventDefault();
+                            showToast('Unlock the section to use fullscreen', 'warning');
+                        }
+                    });
                     editor.on('init', function() {
                         editor.setContent(node.content || '');
+                        updateSectionWordCount(path.join('-'), node.content || '');
+                        updateDocumentWordCount();
+                        if (node.locked) enforceLockOnEditor(editor);
                     });
                     editor.on('Change KeyUp', function() {
-                        setNodeContentByPath(path, editor.getContent());
+                        const html = editor.getContent();
+                        setNodeContentByPath(path, html);
                         currentProject.updatedAt = new Date().toISOString();
-                        setTimeout(() => updateTOCPreview(), 500);
+                        updateSectionWordCount(path.join('-'), html);
+                        setTimeout(() => { updateTOCPreview(); updateDocumentWordCount(); }, 500);
                     });
                 }
             });
@@ -1685,4 +1760,438 @@
         function getProjectLogo(projectId) {
             const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
             return logoStorage[projectId] || null;
+        }
+
+        // ── Citation Manager ──────────────────────────────────────────────────
+
+        function getCitations(projectId) {
+            const all = JSON.parse(localStorage.getItem('bytedraft_references') || '{}');
+            return all[projectId] || [];
+        }
+
+        function saveCitations(projectId, refs) {
+            const all = JSON.parse(localStorage.getItem('bytedraft_references') || '{}');
+            all[projectId] = refs;
+            safeSetItem('bytedraft_references', JSON.stringify(all));
+        }
+
+        function showCitationManagerModal() {
+            if (!currentProject) {
+                showToast('Please select a project first', 'warning');
+                return;
+            }
+            renderCitationsTable();
+            new bootstrap.Modal(document.getElementById('citationManagerModal')).show();
+        }
+
+        function renderCitationsTable() {
+            if (!currentProject) return;
+            const refs = getCitations(currentProject.id);
+            const tbody = document.getElementById('citationsTableBody');
+            if (refs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No references yet.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = refs.map((ref, idx) => `
+                <tr>
+                    <td class="text-center">${idx + 1}</td>
+                    <td>${escapeHtml(ref.authors)}</td>
+                    <td>${escapeHtml(ref.year)}</td>
+                    <td>${escapeHtml(ref.title)}</td>
+                    <td>
+                        <button class="btn btn-xs btn-outline-primary btn-sm me-1" onclick="insertCitationIntoEditor(${idx})" title="Insert [${idx + 1}]">
+                            [${idx + 1}]
+                        </button>
+                        <button class="btn btn-xs btn-outline-secondary btn-sm me-1" onclick="showAddEditReferenceModal(${idx})" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-xs btn-outline-danger btn-sm" onclick="deleteReference(${idx})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddEditReferenceModal(idx) {
+            const modalEl = document.getElementById('addEditReferenceModal');
+            document.getElementById('addEditReferenceModalTitle').textContent = idx < 0 ? 'Add Reference' : 'Edit Reference';
+            document.getElementById('editingRefIndex').value = idx;
+
+            if (idx >= 0 && currentProject) {
+                const refs = getCitations(currentProject.id);
+                const ref = refs[idx] || {};
+                document.getElementById('refTitle').value = ref.title || '';
+                document.getElementById('refAuthors').value = ref.authors || '';
+                document.getElementById('refYear').value = ref.year || '';
+                document.getElementById('refSource').value = ref.source || '';
+                document.getElementById('refUrl').value = ref.url || '';
+                document.getElementById('refNotes').value = ref.notes || '';
+            } else {
+                document.getElementById('refTitle').value = '';
+                document.getElementById('refAuthors').value = '';
+                document.getElementById('refYear').value = '';
+                document.getElementById('refSource').value = '';
+                document.getElementById('refUrl').value = '';
+                document.getElementById('refNotes').value = '';
+            }
+
+            // Show on top of citation manager
+            new bootstrap.Modal(modalEl).show();
+        }
+
+        function saveReference() {
+            if (!currentProject) return;
+            const title = document.getElementById('refTitle').value.trim();
+            if (!title) {
+                showToast('Title is required', 'warning');
+                return;
+            }
+            const ref = {
+                id: 'ref-' + Date.now(),
+                title,
+                authors: document.getElementById('refAuthors').value.trim(),
+                year: document.getElementById('refYear').value.trim(),
+                source: document.getElementById('refSource').value.trim(),
+                url: document.getElementById('refUrl').value.trim(),
+                notes: document.getElementById('refNotes').value.trim()
+            };
+
+            const refs = getCitations(currentProject.id);
+            const idx = parseInt(document.getElementById('editingRefIndex').value, 10);
+            if (idx >= 0) {
+                ref.id = refs[idx].id; // preserve original id on edit
+                refs[idx] = ref;
+            } else {
+                refs.push(ref);
+            }
+            saveCitations(currentProject.id, refs);
+            renderCitationsTable();
+
+            bootstrap.Modal.getInstance(document.getElementById('addEditReferenceModal')).hide();
+            showToast(idx >= 0 ? 'Reference updated' : 'Reference added', 'success');
+        }
+
+        function deleteReference(idx) {
+            if (!currentProject) return;
+            const refs = getCitations(currentProject.id);
+            refs.splice(idx, 1);
+            saveCitations(currentProject.id, refs);
+            renderCitationsTable();
+            showToast('Reference deleted', 'info');
+        }
+
+        function insertCitationIntoEditor(idx) {
+            const editor = window._activeCitationEditor;
+            if (!editor) {
+                showToast('No active editor — click inside an editor section first', 'warning');
+                return;
+            }
+            const num = idx + 1;
+            editor.insertContent(`<sup>[${num}]</sup>`);
+            bootstrap.Modal.getInstance(document.getElementById('citationManagerModal')).hide();
+        }
+
+        function showCrossRefModal() {
+            if (!currentProject) {
+                showToast('Please select a project first', 'warning');
+                return;
+            }
+            const toc = generateTOC();
+            const tbody = document.getElementById('crossRefTableBody');
+            if (toc.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No sections yet.</td></tr>';
+            } else {
+                tbody.innerHTML = toc.map(entry => {
+                    const label = `Section ${escapeHtml(entry.number)} \u2014 ${escapeHtml(entry.title)}`;
+                    return `<tr>
+                        <td>${escapeHtml(entry.number)}</td>
+                        <td>${escapeHtml(entry.title)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"
+                                onclick="insertCrossRef('${escapeHtml(entry.path)}', '${label.replace(/'/g, "\\'")}')">
+                                Insert
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            }
+            new bootstrap.Modal(document.getElementById('crossRefModal')).show();
+        }
+
+        function insertCrossRef(path, label) {
+            const editor = window._activeXRefEditor;
+            if (!editor) {
+                showToast('No active editor — click inside an editor section first', 'warning');
+                return;
+            }
+            editor.insertContent(
+                `<span class="xref" data-path="${path}" contenteditable="false">${label}</span>`
+            );
+            bootstrap.Modal.getInstance(document.getElementById('crossRefModal')).hide();
+        }
+
+        // ── Word Count ────────────────────────────────────────────────────────
+
+        function countWords(html) {
+            if (!html) return 0;
+            const text = html
+                .replace(/<[^>]*>/g, ' ')
+                .replace(/&[a-z#0-9]+;/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            return text ? text.split(' ').filter(w => w.length > 0).length : 0;
+        }
+
+        function updateSectionWordCount(pathKey, html) {
+            const el = document.getElementById(`wc-${pathKey}`);
+            if (!el) return;
+            const n = countWords(html);
+            el.textContent = n > 0 ? `${n.toLocaleString()} words` : '';
+        }
+
+        function updateDocumentWordCount() {
+            if (!currentProject) return;
+            let total = 0;
+            function walk(node, path) {
+                const editor = window.tinymce && tinymce.get(`editor-${path.join('-')}`);
+                total += countWords(editor ? editor.getContent() : (node.content || ''));
+                if (node.subsections) {
+                    node.subsections.forEach((sub, idx) => walk(sub, path.concat(idx)));
+                }
+            }
+            currentProject.sections.forEach((section, idx) => walk(section, [idx]));
+            const el = document.getElementById('wordCountSummary');
+            if (!el) return;
+            if (total === 0) {
+                el.textContent = '';
+            } else {
+                const mins = Math.ceil(total / 200);
+                el.textContent = `${total.toLocaleString()} words · ~${mins} min read`;
+            }
+        }
+
+        // ── Section Locking ───────────────────────────────────────────────────
+
+        function enforceLockOnEditor(editor) {
+            const body = editor.getBody();
+            if (body) body.setAttribute('contenteditable', 'false');
+            // Grey out the fullscreen button with a small delay to let the toolbar render
+            setTimeout(function() {
+                const container = editor.getContainer();
+                if (!container) return;
+                const fsBtn = container.querySelector('.tox-tbtn[data-mce-name="fullscreen"]')
+                    || Array.from(container.querySelectorAll('.tox-tbtn'))
+                        .find(b => (b.title || '').toLowerCase() === 'fullscreen');
+                if (fsBtn) {
+                    fsBtn.dataset.wasTitle = fsBtn.title;
+                    fsBtn.style.opacity = '0.35';
+                    fsBtn.style.cursor = 'not-allowed';
+                    fsBtn.style.filter = 'grayscale(1)';
+                    fsBtn.title = 'Fullscreen disabled (section is locked)';
+                }
+            }, 200);
+        }
+
+        function releaseLockOnEditor(editor) {
+            const body = editor.getBody();
+            if (body) body.setAttribute('contenteditable', 'true');
+            const container = editor.getContainer();
+            if (!container) return;
+            const fsBtn = container.querySelector('.tox-tbtn[data-mce-name="fullscreen"]')
+                || Array.from(container.querySelectorAll('.tox-tbtn'))
+                    .find(b => (b.title || '').toLowerCase() === 'fullscreen'
+                            || (b.dataset.wasTitle || '').toLowerCase() === 'fullscreen');
+            if (fsBtn) {
+                fsBtn.style.opacity = '';
+                fsBtn.style.cursor = '';
+                fsBtn.style.filter = '';
+                fsBtn.title = fsBtn.dataset.wasTitle || 'Fullscreen';
+                delete fsBtn.dataset.wasTitle;
+            }
+        }
+
+        function toggleSectionLock(pathArr) {
+            const node = getNodeByPath(pathArr);
+            if (!node) return;
+            node.locked = !node.locked;
+            applyLockState(pathArr, node.locked);
+            currentProject.updatedAt = new Date().toISOString();
+            const projectIndex = projects.findIndex(p => p.id === currentProject.id);
+            if (projectIndex !== -1) projects[projectIndex] = { ...currentProject };
+            saveProjects();
+            showToast(node.locked ? 'Section locked' : 'Section unlocked', 'info');
+        }
+
+        function applyLockState(pathArr, locked) {
+            const pk = pathArr.join('-');
+
+            // Section container class and drag
+            const sectionDiv = document.getElementById(`section-${pk}`);
+            if (sectionDiv) {
+                sectionDiv.setAttribute('draggable', locked ? 'false' : 'true');
+                if (locked) {
+                    sectionDiv.classList.add('section-locked');
+                } else {
+                    sectionDiv.classList.remove('section-locked');
+                }
+            }
+
+            // Drag handle
+            const dragHandle = document.getElementById(`draghandle-${pk}`);
+            if (dragHandle) {
+                dragHandle.style.cursor = locked ? 'not-allowed' : 'grab';
+                dragHandle.style.opacity = locked ? '0.3' : '1';
+                dragHandle.style.pointerEvents = locked ? 'none' : '';
+            }
+
+            // Title input
+            const titleInput = document.getElementById(`titleinput-${pk}`);
+            if (titleInput) titleInput.disabled = locked;
+
+            // Delete button
+            const deleteBtn = document.getElementById(`deletebtn-${pk}`);
+            if (deleteBtn) deleteBtn.disabled = locked;
+
+            // Add subsection button
+            const addBtn = document.getElementById(`addbtn-${pk}`);
+            if (addBtn) addBtn.disabled = locked;
+
+            // Lock button icon/class
+            const lockBtn = document.getElementById(`lockbtn-${pk}`);
+            if (lockBtn) {
+                lockBtn.className = `btn btn-sm ${locked ? 'btn-warning' : 'btn-outline-secondary'} btn-icon`;
+                lockBtn.title = locked ? 'Unlock section' : 'Lock section';
+                lockBtn.innerHTML = `<i class="fas fa-${locked ? 'lock' : 'lock-open'}"></i>`;
+            }
+
+            // TinyMCE editor body editability
+            const editor = window.tinymce && tinymce.get(`editor-${pk}`);
+            if (editor) {
+                if (locked) {
+                    enforceLockOnEditor(editor);
+                } else {
+                    releaseLockOnEditor(editor);
+                }
+            }
+        }
+
+        // ── Find & Replace ────────────────────────────────────────────────────
+
+        function showFindReplaceModal() {
+            if (!currentProject) {
+                showToast('Please select a project first', 'warning');
+                return;
+            }
+            document.getElementById('findInput').value = '';
+            document.getElementById('replaceInput').value = '';
+            document.getElementById('findReplaceResults').innerHTML = '';
+            new bootstrap.Modal(document.getElementById('findReplaceModal')).show();
+            setTimeout(() => document.getElementById('findInput').focus(), 300);
+        }
+
+        function buildFindRegex() {
+            const term = document.getElementById('findInput').value;
+            if (!term) return null;
+            const caseSensitive = document.getElementById('findCaseSensitive').checked;
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return new RegExp(escaped, caseSensitive ? 'g' : 'gi');
+        }
+
+        function walkAllSections(fn) {
+            function walk(node, path) {
+                fn(node, path);
+                if (node.subsections) {
+                    node.subsections.forEach((sub, idx) => walk(sub, path.concat(idx)));
+                }
+            }
+            currentProject.sections.forEach((section, idx) => walk(section, [idx]));
+        }
+
+        function executeFindAll() {
+            if (!currentProject) return;
+            const regex = buildFindRegex();
+            if (!regex) { showToast('Please enter a search term', 'warning'); return; }
+
+            updateAllSectionContents();
+
+            let totalMatches = 0;
+            const hits = [];
+
+            walkAllSections((node, path) => {
+                const contentMatches = (node.content || '').match(regex) || [];
+                const titleMatches = node.title.match(regex) || [];
+                const count = contentMatches.length + titleMatches.length;
+                if (count > 0) {
+                    totalMatches += count;
+                    hits.push({ title: node.title, count, inTitle: titleMatches.length > 0 });
+                }
+            });
+
+            const resultsDiv = document.getElementById('findReplaceResults');
+            if (totalMatches === 0) {
+                resultsDiv.innerHTML = '<div class="alert alert-secondary py-2 mb-0">No matches found.</div>';
+            } else {
+                const rows = hits.map(h =>
+                    `<li>${escapeHtml(h.title)}${h.inTitle ? ' <span class="badge bg-secondary">title</span>' : ''} — <strong>${h.count}</strong> match${h.count !== 1 ? 'es' : ''}</li>`
+                ).join('');
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-info py-2 mb-2">
+                        Found <strong>${totalMatches}</strong> match${totalMatches !== 1 ? 'es' : ''} in <strong>${hits.length}</strong> section${hits.length !== 1 ? 's' : ''}.
+                    </div>
+                    <ul class="mb-0 small">${rows}</ul>`;
+            }
+        }
+
+        function executeReplaceAll() {
+            if (!currentProject) return;
+            const regex = buildFindRegex();
+            if (!regex) { showToast('Please enter a search term', 'warning'); return; }
+
+            const replacement = document.getElementById('replaceInput').value;
+            updateAllSectionContents();
+
+            let totalReplaced = 0;
+            let sectionsModified = 0;
+
+            walkAllSections((node, path) => {
+                let changed = false;
+
+                // Replace in content
+                const contentMatches = (node.content || '').match(regex) || [];
+                if (contentMatches.length > 0) {
+                    node.content = node.content.replace(regex, replacement);
+                    totalReplaced += contentMatches.length;
+                    changed = true;
+                    const editor = tinymce.get(`editor-${path.join('-')}`);
+                    if (editor) editor.setContent(node.content);
+                }
+
+                // Replace in title
+                const titleMatches = node.title.match(regex) || [];
+                if (titleMatches.length > 0) {
+                    node.title = node.title.replace(regex, replacement);
+                    totalReplaced += titleMatches.length;
+                    changed = true;
+                    const titleInput = document.querySelector(`#section-${path.join('-')} input[type="text"]`);
+                    if (titleInput) titleInput.value = node.title;
+                }
+
+                if (changed) sectionsModified++;
+            });
+
+            if (totalReplaced === 0) {
+                document.getElementById('findReplaceResults').innerHTML =
+                    '<div class="alert alert-secondary py-2 mb-0">No matches found.</div>';
+                return;
+            }
+
+            currentProject.updatedAt = new Date().toISOString();
+            const projectIndex = projects.findIndex(p => p.id === currentProject.id);
+            if (projectIndex !== -1) projects[projectIndex] = { ...currentProject };
+            saveProjects();
+            updateTOCPreview();
+
+            document.getElementById('findReplaceResults').innerHTML =
+                `<div class="alert alert-success py-2 mb-0">Replaced <strong>${totalReplaced}</strong> match${totalReplaced !== 1 ? 'es' : ''} across <strong>${sectionsModified}</strong> section${sectionsModified !== 1 ? 's' : ''}.</div>`;
         }

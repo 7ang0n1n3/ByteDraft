@@ -123,6 +123,12 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.section-locked,
+.subsection-item.section-locked {
+    border-left: 3px solid #f59e0b !important;
+    opacity: 0.9;
+}
+
 /* Section header with controls */
 .section-header {
     background-color: var(--background-color);
@@ -344,6 +350,22 @@ body {
    ========================================================================== */
 
 /* TOC preview container */
+.sidebar-section-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sidebar-section-header:hover h6 {
+    color: var(--primary-color);
+}
+
+.sidebar-chevron {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
 .toc-preview {
     max-height: 300px;
     overflow-y: auto;

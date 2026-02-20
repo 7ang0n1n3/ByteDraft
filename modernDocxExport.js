@@ -182,9 +182,12 @@ class ModernDocxExporter {
                             default: footer
                         },
                         children: [
-                            
+
                             // Main content
-                            ...docxElements
+                            ...docxElements,
+
+                            // References page (only if citations exist)
+                            ...this.createReferencesPage(project)
                         ]
                     }
                 ]
@@ -856,27 +859,22 @@ class ModernDocxExporter {
                             children.push(textRun);
                         }
                         break;
-                    case 'a':
-                        // Process nested formatting within links
-                        const linkChildren = this.processInlineElements(child);
-                        if (linkChildren.length > 0) {
-                            linkChildren.forEach(textRun => {
-                                textRun.color = '0563C1';
-                                textRun.underline = { type: 'single' };
-                            });
-                            children.push(...linkChildren);
+                    case 'a': {
+                        const href = child.getAttribute('href') || '';
+                        const linkText = child.textContent || '';
+                        if (!linkText.trim()) break;
+                        const linkRun = new this.docx.TextRun({
+                            text: linkText,
+                            color: '0563C1',
+                            underline: { type: 'single' }
+                        });
+                        if (href) {
+                            children.push(new this.docx.ExternalHyperlink({ children: [linkRun], link: href }));
                         } else {
-                            // If no children were processed, create a text run from the text content
-                            const textContent = child.textContent || child.innerText || '';
-                            if (textContent.trim()) {
-                                children.push(new this.docx.TextRun({ 
-                                    text: textContent, 
-                                    color: '0563C1',
-                                    underline: { type: 'single' }
-                                }));
-                            }
+                            children.push(linkRun);
                         }
                         break;
+                    }
                     case 'code':
                         children.push(new this.docx.TextRun({ 
                             text: child.textContent, 
@@ -891,17 +889,30 @@ class ModernDocxExporter {
                         }));
                         break;
                     case 'sub':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            subScript: true
-                        }));
+                    case 'sup': {
+                        const isSuper = tagName === 'sup';
+                        const scriptProp = isSuper ? 'superScript' : 'subScript';
+                        Array.from(child.childNodes).forEach(grandChild => {
+                            if (grandChild.nodeType === Node.TEXT_NODE) {
+                                if (grandChild.textContent.trim()) {
+                                    children.push(new this.docx.TextRun({ text: grandChild.textContent, [scriptProp]: true }));
+                                }
+                            } else if (grandChild.nodeType === Node.ELEMENT_NODE && grandChild.tagName.toLowerCase() === 'a') {
+                                const href = grandChild.getAttribute('href') || '';
+                                const text = grandChild.textContent || '';
+                                if (text.trim()) {
+                                    const run = new this.docx.TextRun({ text, [scriptProp]: true, color: '0563C1', underline: { type: 'single' } });
+                                    children.push(href ? new this.docx.ExternalHyperlink({ children: [run], link: href }) : run);
+                                }
+                            } else if (grandChild.nodeType === Node.ELEMENT_NODE) {
+                                const text = grandChild.textContent || '';
+                                if (text.trim()) {
+                                    children.push(new this.docx.TextRun({ text, [scriptProp]: true }));
+                                }
+                            }
+                        });
                         break;
-                    case 'sup':
-                        children.push(new this.docx.TextRun({ 
-                            text: child.textContent, 
-                            superScript: true
-                        }));
-                        break;
+                    }
                     case 'small':
                         children.push(new this.docx.TextRun({ 
                             text: child.textContent, 
@@ -2234,6 +2245,46 @@ class ModernDocxExporter {
                 hideTabAndPageNumbersInWebView: true
             })
         ];
+    }
+
+    createReferencesPage(project) {
+        const all = JSON.parse(localStorage.getItem('bytedraft_references') || '{}');
+        const refs = all[project.id] || [];
+        if (refs.length === 0) return [];
+
+        const elements = [
+            new this.docx.Paragraph({ text: '', pageBreakBefore: true }),
+            new this.docx.Paragraph({
+                children: [
+                    new this.docx.TextRun({
+                        text: 'References',
+                        size: 48,
+                        font: 'Calibri',
+                        bold: true,
+                        color: '2563eb'
+                    })
+                ],
+                spacing: { before: 200, after: 400 }
+            })
+        ];
+
+        refs.forEach((ref, idx) => {
+            const parts = [];
+            if (ref.authors) parts.push(ref.authors);
+            if (ref.year) parts.push(`(${ref.year})`);
+            if (ref.title) parts.push(`${ref.title}.`);
+            if (ref.source) parts.push(`${ref.source}.`);
+            if (ref.url) parts.push(ref.url);
+            const text = `[${idx + 1}] ${parts.join(' ')}`;
+
+            elements.push(new this.docx.Paragraph({
+                children: [new this.docx.TextRun({ text, font: 'Calibri', size: 22 })],
+                spacing: { after: 160 },
+                indent: { left: 360, hanging: 360 }
+            }));
+        });
+
+        return elements;
     }
 }
 

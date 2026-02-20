@@ -18,6 +18,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Drag & Drop Reordering**: Intuitive drag and drop interface to reorder sections and subsections
 - **Professional Heading Hierarchy**: Automatic Heading 1, 2, 3 styles with proper numbering (1., 1.1., 1.1.1.)
 - **Auto-updating Table of Contents**: Word-compatible TOC field that updates automatically
+- **Citation Manager**: Insert numbered inline citations `[1]`, `[2]` via a toolbar button and manage the full reference list through a dedicated modal; a formatted References page is automatically appended to DOCX exports
 - **Professional Templates**: Pre-built templates for various document types
 - **Version History**: Track changes and document evolution
 - **Custom Fields**: Add project-specific metadata
@@ -65,6 +66,19 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v0.0.45
+- **Feature**: Cross-references — `[XRef]` TinyMCE toolbar button opens a section picker and inserts a styled, non-editable `<span class="xref">` (blue, underlined, italic) at the cursor; resolves to "Section N — Title" plain text in DOCX export
+- **Feature**: Collapsible sidebar sections — Projects, TOC, Templates, and Custom Fields panels can be collapsed/expanded with a chevron; state persisted to localStorage
+- **Feature**: Find & Replace — modal with find/replace inputs, case-sensitive option, Find All (lists matches by section), Replace All (updates live editors and section titles, saves automatically)
+- **Feature**: Word count / reading time — per-section word count badge updates live as you type; document total and estimated reading time (200 wpm) displayed below the TOC in the sidebar
+- **Feature**: Section locking — lock any section read-only with a toolbar lock button; locked sections disable the title input, delete/add-subsection buttons, and drag handle; TinyMCE content is non-editable; fullscreen is blocked and visually greyed out; lock state persists with project data
+
+### v0.0.44
+- **Feature**: Citation Manager — insert numbered inline citations `[1]`, `[2]` via a new `[Cite]` TinyMCE toolbar button
+- **Feature**: Citation Manager modal — add, edit, and delete references (Title, Authors, Year, Source, URL, Notes); one-click insertion of `<sup>[N]</sup>` at the cursor
+- **Feature**: References page in DOCX export — a formatted "References" page is automatically appended when citations exist; omitted when the project has none
+- **Storage**: New localStorage key `bytedraft_references` — per-project reference lists stored as JSON arrays
 
 ### v0.0.43
 - **Refactor**: Extracted all inline JavaScript into `app.js` for cleaner project structure
@@ -348,5 +362,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.43
+**Version** 0.0.45
 © 2025 - Built for offline productivity
