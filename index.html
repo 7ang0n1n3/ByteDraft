@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="0.0.45">
+    <meta name="version" content="0.0.46">
     <title>ByteDraft - Technical Documentation Tool</title>
     
     <!-- Bootstrap CSS -->
@@ -595,5 +595,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Section Comments Modal -->
+    <div class="modal fade" id="commentsModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="fas fa-comment me-2"></i>Comments — <span id="commentsSectionTitle"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <textarea id="newCommentText" class="form-control" rows="2" placeholder="Write a comment..."></textarea>
+              <button class="btn btn-sm btn-primary mt-2" onclick="addSectionComment()">
+                <i class="fas fa-plus me-1"></i>Add Comment
+              </button>
+            </div>
+            <hr>
+            <div id="commentsList"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 </body>
-</html> 
+</html>

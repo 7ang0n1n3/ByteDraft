@@ -1212,4 +1212,21 @@ body {
 [data-theme="dark"] .section-item[draggable="true"]:hover,
 [data-theme="dark"] .subsection-item[draggable="true"]:hover {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-} 
+}
+
+.comment-resolved { opacity: 0.6; }
+
+/* Dark theme comment cards */
+[data-theme="dark"] #commentsModal .card {
+    background-color: var(--surface-color) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-color) !important;
+}
+
+[data-theme="dark"] #commentsModal .card p {
+    color: var(--text-color) !important;
+}
+
+[data-theme="dark"] #commentsModal .card small {
+    color: #9ca3af !important;
+}

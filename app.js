@@ -375,6 +375,7 @@
             nodeDiv.addEventListener('dragend', handleDragEnd);
             
             const pk = path.join('-');
+            const unresolvedCount = (node.comments || []).filter(c => !c.resolved).length;
             nodeDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-1" style="justify-content: space-between;">
                   <div class="d-flex align-items-center" style="gap: 8px;">
@@ -400,6 +401,12 @@
                         title="${node.locked ? 'Unlock section' : 'Lock section'}"
                         onclick="toggleSectionLock(${JSON.stringify(path)})">
                         <i class="fas fa-${node.locked ? 'lock' : 'lock-open'}"></i>
+                    </button>
+                    <button id="commentbtn-${pk}"
+                        class="btn btn-sm ${unresolvedCount > 0 ? 'btn-info' : 'btn-outline-secondary'} btn-icon"
+                        title="${unresolvedCount > 0 ? unresolvedCount + ' unresolved comment(s)' : 'Comments'}"
+                        onclick="showCommentsModal(${JSON.stringify(path)})">
+                        <i class="fas fa-comment"></i>${unresolvedCount > 0 ? `<span class="ms-1" style="font-size:0.75em;">${unresolvedCount}</span>` : ''}
                     </button>
                   </div>
                   <div class="d-flex align-items-center gap-2">
@@ -2194,4 +2201,102 @@
 
             document.getElementById('findReplaceResults').innerHTML =
                 `<div class="alert alert-success py-2 mb-0">Replaced <strong>${totalReplaced}</strong> match${totalReplaced !== 1 ? 'es' : ''} across <strong>${sectionsModified}</strong> section${sectionsModified !== 1 ? 's' : ''}.</div>`;
+        }
+
+        // ── Section Comments ──────────────────────────────────────────────────
+
+        let _activeCommentPath = null;
+
+        function showCommentsModal(pathArr) {
+            _activeCommentPath = pathArr;
+            const node = getNodeByPath(pathArr);
+            if (!node) return;
+            document.getElementById('commentsSectionTitle').textContent = node.title;
+            document.getElementById('newCommentText').value = '';
+            renderCommentsList(node);
+            new bootstrap.Modal(document.getElementById('commentsModal')).show();
+            setTimeout(() => document.getElementById('newCommentText').focus(), 300);
+        }
+
+        function renderCommentsList(node) {
+            const comments = node.comments || [];
+            const el = document.getElementById('commentsList');
+            if (comments.length === 0) {
+                el.innerHTML = '<p class="text-muted text-center mb-0">No comments yet.</p>';
+                return;
+            }
+            el.innerHTML = comments.map(c => `
+                <div class="card mb-2${c.resolved ? ' comment-resolved' : ''}">
+                  <div class="card-body py-2 px-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                      <p class="mb-1 flex-grow-1"${c.resolved ? ' style="text-decoration:line-through"' : ''}>${escapeHtml(c.text)}</p>
+                      <div class="d-flex gap-1 flex-shrink-0">
+                        <button class="btn btn-sm ${c.resolved ? 'btn-outline-secondary' : 'btn-outline-success'}"
+                            onclick="toggleResolveComment('${c.id}')"
+                            title="${c.resolved ? 'Unresolve' : 'Resolve'}">
+                          <i class="fas fa-${c.resolved ? 'rotate-left' : 'check'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteSectionComment('${c.id}')" title="Delete">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <small class="text-muted">${new Date(c.timestamp).toLocaleString()}${c.resolved ? ' · Resolved' : ''}</small>
+                  </div>
+                </div>`).join('');
+        }
+
+        function addSectionComment() {
+            const text = document.getElementById('newCommentText').value.trim();
+            if (!text) { showToast('Comment cannot be empty', 'warning'); return; }
+            const node = getNodeByPath(_activeCommentPath);
+            if (!node) return;
+            if (!node.comments) node.comments = [];
+            node.comments.push({
+                id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+                text,
+                timestamp: new Date().toISOString(),
+                resolved: false
+            });
+            document.getElementById('newCommentText').value = '';
+            renderCommentsList(node);
+            updateCommentButton(_activeCommentPath, node);
+            _saveCurrentProject();
+        }
+
+        function toggleResolveComment(commentId) {
+            const node = getNodeByPath(_activeCommentPath);
+            if (!node?.comments) return;
+            const c = node.comments.find(c => c.id === commentId);
+            if (c) c.resolved = !c.resolved;
+            renderCommentsList(node);
+            updateCommentButton(_activeCommentPath, node);
+            _saveCurrentProject();
+        }
+
+        function deleteSectionComment(commentId) {
+            const node = getNodeByPath(_activeCommentPath);
+            if (!node?.comments) return;
+            node.comments = node.comments.filter(c => c.id !== commentId);
+            renderCommentsList(node);
+            updateCommentButton(_activeCommentPath, node);
+            _saveCurrentProject();
+        }
+
+        function updateCommentButton(pathArr, node) {
+            const pk = pathArr.join('-');
+            const btn = document.getElementById(`commentbtn-${pk}`);
+            if (!btn) return;
+            const n = (node.comments || []).filter(c => !c.resolved).length;
+            btn.className = `btn btn-sm ${n > 0 ? 'btn-info' : 'btn-outline-secondary'} btn-icon`;
+            btn.title = n > 0 ? `${n} unresolved comment(s)` : 'Comments';
+            btn.innerHTML = `<i class="fas fa-comment"></i>${n > 0 ? `<span class="ms-1" style="font-size:0.75em;">${n}</span>` : ''}`;
+        }
+
+        function _saveCurrentProject() {
+            currentProject.updatedAt = new Date().toISOString();
+            const idx = projects.findIndex(p => p.id === currentProject.id);
+            if (idx !== -1) projects[idx] = { ...currentProject };
+            saveProjects();
         }

@@ -19,6 +19,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Professional Heading Hierarchy**: Automatic Heading 1, 2, 3 styles with proper numbering (1., 1.1., 1.1.1.)
 - **Auto-updating Table of Contents**: Word-compatible TOC field that updates automatically
 - **Citation Manager**: Insert numbered inline citations `[1]`, `[2]` via a toolbar button and manage the full reference list through a dedicated modal; a formatted References page is automatically appended to DOCX exports
+- **Section Annotations**: Add, resolve, and delete review comments on any section or subsection; persisted in JSON exports, excluded from DOCX
 - **Professional Templates**: Pre-built templates for various document types
 - **Version History**: Track changes and document evolution
 - **Custom Fields**: Add project-specific metadata
@@ -66,6 +67,12 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v0.0.46
+- **Feature**: Section annotations — each section and subsection has a comment button (speech bubble icon); click to open a modal where you can add, resolve, unresolve, and delete review notes
+- **Behaviour**: Comment button turns blue with an unresolved-count badge when comments are pending; grey when all resolved or none exist
+- **Persistence**: Comments stored directly on section nodes (`node.comments[]`) — included automatically in JSON export/import, invisible to DOCX export
+- **Dark mode**: Comment cards properly themed in dark mode
 
 ### v0.0.45
 - **Feature**: Cross-references — `[XRef]` TinyMCE toolbar button opens a section picker and inserts a styled, non-editable `<span class="xref">` (blue, underlined, italic) at the cursor; resolves to "Section N — Title" plain text in DOCX export
@@ -362,5 +369,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.45
+**Version** 0.0.46
 © 2025 - Built for offline productivity
