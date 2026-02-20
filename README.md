@@ -68,6 +68,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.52
+- **Fix**: Font color and background highlight now correctly exported — a second style-cleaning pass in `cleanContentForDocx` was explicitly stripping `color`, `background-color`, and `font-family` from all non-table elements after the first pass had preserved them; second pass now only removes layout-only properties (margin, padding, display, float, position)
+
 ### v0.0.51
 - **Fix**: Font color and font-family now correctly exported to DOCX — `cleanContentForDocx` was stripping `color` and `font-family` properties when rebuilding span styles, so they never reached the export pipeline
 
@@ -390,5 +393,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.51
+**Version** 0.0.52
 © 2025 - Built for offline productivity

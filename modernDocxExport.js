@@ -390,15 +390,20 @@ class ModernDocxExporter {
                         el.removeAttribute('style');
                     }
                 } else {
-                    // For non-table cells, preserve font-size but remove other styles
+                    // For other elements: strip layout-only properties but preserve
+                    // all text-formatting properties (color, background-color,
+                    // font-size, font-weight, font-style, font-family,
+                    // text-decoration, text-align, vertical-align, etc.)
                     const cleanStyle = style
-                        .replace(/color\s*:\s*[^;]+;?/g, '')
-                        .replace(/background[^;]*;?/g, '')
-                        .replace(/margin[^;]*;?/g, '')
-                        .replace(/padding[^;]*;?/g, '')
-                        .replace(/font-family[^;]*;?/g, '')
+                        .replace(/\bmargin[^;]*;?/g, '')
+                        .replace(/\bpadding[^;]*;?/g, '')
+                        .replace(/\bdisplay[^;]*;?/g, '')
+                        .replace(/\bfloat[^;]*;?/g, '')
+                        .replace(/\bposition[^;]*;?/g, '')
+                        .replace(/\bwidth[^;]*;?/g, '')
+                        .replace(/\bheight[^;]*;?/g, '')
                         .trim();
-                    
+
                     if (cleanStyle) {
                         el.setAttribute('style', cleanStyle);
                     } else {
