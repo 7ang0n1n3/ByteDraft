@@ -19,6 +19,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Professional Heading Hierarchy**: Automatic Heading 1, 2, 3 styles with proper numbering (1., 1.1., 1.1.1.)
 - **Auto-updating Table of Contents**: Word-compatible TOC field that updates automatically
 - **Citation Manager**: Insert numbered inline citations `[1]`, `[2]` via a toolbar button and manage the full reference list through a dedicated modal; a formatted References page is automatically appended to DOCX exports
+- **Footnotes & Endnotes**: Insert footnote `[fn]` (blue) or endnote `[en]` (purple) superscript markers via a dedicated toolbar button; markers are numbered sequentially at DOCX export time and collected onto dedicated Footnotes and Endnotes pages (omitted if none exist)
 - **Section Annotations**: Add, resolve, and delete review comments on any section or subsection; persisted in JSON exports, excluded from DOCX
 - **Professional Templates**: Pre-built templates for various document types
 - **Version History**: Track changes and document evolution
@@ -71,6 +72,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v1.4.0
+- **Feature**: Footnotes & Endnotes — a new `[N]` TinyMCE toolbar button opens a modal to insert footnote (`[fn]`, blue) or endnote (`[en]`, purple) superscript markers at the cursor; markers are stored as `<sup class="bd-fn">` with `data-note-type` and `data-note` attributes, styled with accent colours in the editor, and preserved across saves via `extended_valid_elements: 'sup[*]'`
+- **Export**: At DOCX export time, a `resolveNotes()` pre-pass (DOMParser) numbers footnote markers `[1]`, `[2]`, … and endnote markers `[E1]`, `[E2]`, … sequentially, strips the custom attributes, and collects the note text; a "Footnotes" page (blue title) and an "Endnotes" page (purple title) are appended before the References page, and are omitted entirely if no notes of that type exist
 
 ### v1.3.6
 - **Fix**: TOC sidebar links now scroll so the section card clears the sticky top bar — replaced `scrollIntoView({block: 'start'})` with a manual `window.scrollTo()` that subtracts the top bar's measured height plus 12 px of breathing room
@@ -466,5 +471,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.6
+**Version** 1.4.0
 © 2026 - Built for offline productivity

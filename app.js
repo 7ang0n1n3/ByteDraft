@@ -361,6 +361,12 @@
                     cursor: default;
                     font-style: italic;
                 }
+                sup.bd-fn[data-note-type="footnote"] {
+                    color: #0d6efd; font-weight: bold; cursor: help;
+                }
+                sup.bd-fn[data-note-type="endnote"] {
+                    color: #6f42c1; font-weight: bold; cursor: help;
+                }
             `;
         }
 
@@ -380,8 +386,9 @@
                 ],
                 toolbar: [
                     'undo redo | formatselect | bold italic underline strikethrough',
-                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref | insertfield'
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref | insertfield | note'
                 ].join(' | '),
+                extended_valid_elements: 'sup[*]',
                 font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
                 font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
                 content_style: buildTinyMCEContentStyle(isDark),
@@ -506,6 +513,7 @@
                     editor.ui.registry.addIcon('bytedraft-cite',  _icons.cite  || '[Cite]');
                     editor.ui.registry.addIcon('bytedraft-xref',  _icons.xref  || '[XRef]');
                     editor.ui.registry.addIcon('bytedraft-field', _icons.field || '{{}}');
+                    editor.ui.registry.addIcon('bytedraft-note',  _icons.note  || '[N]');
                     editor.ui.registry.addMenuButton('insertfield', {
                         icon: 'bytedraft-field',
                         tooltip: 'Insert field placeholder',
@@ -537,6 +545,14 @@
                         onAction: function() {
                             window._activeXRefEditor = editor;
                             showCrossRefModal();
+                        }
+                    });
+                    editor.ui.registry.addButton('note', {
+                        icon: 'bytedraft-note',
+                        tooltip: 'Insert footnote or endnote',
+                        onAction: function() {
+                            window._activeNoteEditor = editor;
+                            showNoteModal();
                         }
                     });
                     editor.on('BeforeExecCommand', function(e) {
@@ -2073,6 +2089,30 @@
                 }).join('');
             }
             bootstrap.Modal.getOrCreateInstance(document.getElementById('crossRefModal')).show();
+        }
+
+        function showNoteModal() {
+            if (!currentProject) { showToast('Please select a project first', 'warning'); return; }
+            document.getElementById('noteTypeFootnote').checked = true;
+            document.getElementById('noteText').value = '';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('noteModal')).show();
+            setTimeout(() => document.getElementById('noteText').focus(), 300);
+        }
+
+        function insertNote() {
+            const editor = window._activeNoteEditor;
+            if (!editor) { showToast('No active editor — click inside a section first', 'warning'); return; }
+            const noteType = document.querySelector('input[name="noteType"]:checked').value;
+            const noteText = document.getElementById('noteText').value.trim();
+            if (!noteText) { showToast('Note text cannot be empty', 'warning'); return; }
+            const label = noteType === 'footnote' ? '[fn]' : '[en]';
+            const escaped = noteText.replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+                                     .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            editor.insertContent(
+                '<sup class="bd-fn" data-note-type="' + noteType + '" ' +
+                'data-note="' + escaped + '" contenteditable="false">' + label + '</sup>'
+            );
+            bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
         }
 
         function insertCrossRef(path, label) {

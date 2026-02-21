@@ -23,9 +23,12 @@ class ModernDocxExporter {
             // Re-resolve cross-reference spans to current titles before cleaning
             const resolvedContent = this.resolveXRefs(allContent, project);
 
+            // Extract footnote/endnote markers, number them, and strip custom attrs
+            const { html: notesHtml, footnotes, endnotes } = this.resolveNotes(resolvedContent);
+
             // Clean up the content for better DOCX conversion
-            const cleanedContent = this.cleanContentForDocx(resolvedContent);
-            
+            const cleanedContent = this.cleanContentForDocx(notesHtml);
+
             // Convert HTML to DOCX elements
             const docxElements = this.htmlToDocxElements(cleanedContent);
             
@@ -193,6 +196,12 @@ class ModernDocxExporter {
 
                             // Main content
                             ...docxElements,
+
+                            // Footnotes page (only if footnotes exist)
+                            ...this.createNotesPage(footnotes, 'Footnotes', '0d6efd'),
+
+                            // Endnotes page (only if endnotes exist)
+                            ...this.createNotesPage(endnotes, 'Endnotes', '6f42c1'),
 
                             // References page (only if citations exist)
                             ...this.createReferencesPage(project)
@@ -2191,6 +2200,56 @@ class ModernDocxExporter {
                 hideTabAndPageNumbersInWebView: true
             })
         ];
+    }
+
+    resolveNotes(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const footnotes = [];
+        const endnotes  = [];
+        let fnCount = 0, enCount = 0;
+
+        doc.querySelectorAll('sup.bd-fn[data-note-type]').forEach(sup => {
+            const type = sup.getAttribute('data-note-type');
+            const text = sup.getAttribute('data-note') || '';
+            if (type === 'footnote') {
+                fnCount++;
+                footnotes.push({ num: fnCount, text });
+                sup.textContent = '[' + fnCount + ']';
+            } else if (type === 'endnote') {
+                enCount++;
+                endnotes.push({ num: 'E' + enCount, text });
+                sup.textContent = '[E' + enCount + ']';
+            }
+            sup.removeAttribute('data-note');
+            sup.removeAttribute('data-note-type');
+            sup.removeAttribute('class');
+            sup.removeAttribute('contenteditable');
+        });
+
+        return { html: doc.body.innerHTML, footnotes, endnotes };
+    }
+
+    createNotesPage(notes, title, color) {
+        if (!notes || notes.length === 0) return [];
+        const elements = [
+            new this.docx.Paragraph({ text: '', pageBreakBefore: true }),
+            new this.docx.Paragraph({
+                children: [new this.docx.TextRun({
+                    text: title, size: 48, font: 'Calibri', bold: true, color: color || '2563eb'
+                })],
+                spacing: { before: 200, after: 400 }
+            })
+        ];
+        notes.forEach(n => {
+            elements.push(new this.docx.Paragraph({
+                children: [new this.docx.TextRun({
+                    text: '[' + n.num + '] ' + n.text, font: 'Calibri', size: 22
+                })],
+                spacing: { after: 160 },
+                indent: { left: 360, hanging: 360 }
+            }));
+        });
+        return elements;
     }
 
     createReferencesPage(project) {
