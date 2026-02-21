@@ -72,6 +72,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.1.0
+- **Fix**: Blank page between Document Changelog and TOC eliminated — replaced `pageBreakBefore: true` (OOXML paragraph property) on the TOC title with an explicit `<w:br w:type="page"/>` run (`PageBreak`) at the end of the changelog content; the paragraph property was causing a double page break whenever the changelog table filled the previous page to its boundary
+- **Fix**: Blank page between Title page and Changelog eliminated — the assembly was emitting a standalone `pageBreakBefore` paragraph before the changelog *and* the empty-changelog branch emitted its own leading `pageBreakBefore` paragraph, producing two consecutive forced breaks; consolidated so only the changelog title paragraph carries `pageBreakBefore: true`
+
 ### v1.0.0
 - **Redesign**: Complete UI overhaul — "Slate Pro" design system replacing the generic Bootstrap appearance
 - **Feature**: Collapsible sidebar — collapse the left panel with the `‹` button; a floating accent tab on the left edge restores it; state persisted to localStorage
@@ -423,5 +427,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.0.0
+**Version** 1.1.0
 © 2026 - Built for offline productivity

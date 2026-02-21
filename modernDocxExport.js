@@ -147,13 +147,8 @@ class ModernDocxExporter {
                         children: [
                             // Title page content
                             ...titlePage,
-                            
-                            // Page break after title page
-                            new this.docx.Paragraph({
-                                pageBreakBefore: true
-                            }),
-                            
-                            // Changelog page content
+
+                            // Changelog page content (carries its own pageBreakBefore on title)
                             ...changelogPage,
                             
                             
@@ -1932,10 +1927,6 @@ class ModernDocxExporter {
             // If no changelog data, return empty page with just title
             return [
                 new this.docx.Paragraph({
-                    text: '',
-                    pageBreakBefore: true
-                }),
-                new this.docx.Paragraph({
                     children: [
                         new this.docx.TextRun({
                             text: 'Document Changelog',
@@ -1946,16 +1937,18 @@ class ModernDocxExporter {
                         })
                     ],
                     alignment: this.docx.AlignmentType.CENTER,
-                    spacing: { before: 400, after: 400 }
+                    spacing: { before: 400, after: 400 },
+                    pageBreakBefore: true
                 }),
                 new this.docx.Paragraph({
                     text: 'No changelog entries available.',
                     alignment: this.docx.AlignmentType.CENTER,
                     spacing: { before: 200, after: 200 }
                 }),
+                // Explicit page-break run — unconditional, avoids double-break that
+                // pageBreakBefore: true causes when the paragraph already lands at a page top
                 new this.docx.Paragraph({
-                    text: '',
-                    pageBreakBefore: true
+                    children: [new this.docx.PageBreak()]
                 })
             ];
         }
@@ -2070,7 +2063,7 @@ class ModernDocxExporter {
         });
 
         return [
-            // Changelog title
+            // Changelog title — pageBreakBefore separates it from the title page
             new this.docx.Paragraph({
                 children: [
                     new this.docx.TextRun({
@@ -2082,30 +2075,29 @@ class ModernDocxExporter {
                     })
                 ],
                 alignment: this.docx.AlignmentType.CENTER,
-                spacing: { before: 400, after: 400 }
+                spacing: { before: 400, after: 400 },
+                pageBreakBefore: true
             }),
-            
+
             // Changelog table
             new this.docx.Table({
                 rows: tableRows,
                 width: { size: 100, type: this.docx.WidthType.PERCENTAGE },
                 alignment: this.docx.AlignmentType.CENTER
             }),
-            
 
-
+            // Explicit page-break run before TOC — avoids the blank page that
+            // pageBreakBefore: true can produce when the table happens to fill the previous page
+            new this.docx.Paragraph({
+                children: [new this.docx.PageBreak()]
+            })
         ];
     }
 
     createTOCPage(project) {
         return [
-            // Page break to start TOC page
-            new this.docx.Paragraph({
-                text: '',
-                pageBreakBefore: true
-            }),
-            
-            // TOC title
+            // TOC title — the explicit PageBreak run at the end of changelogPage
+            // handles the page break; no pageBreakBefore here to avoid double-breaks
             new this.docx.Paragraph({
                 children: [
                     new this.docx.TextRun({
