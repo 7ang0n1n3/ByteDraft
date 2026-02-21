@@ -1,9 +1,9 @@
         // Global state
         let currentProject = null;
-        let projects = JSON.parse(localStorage.getItem('bytedraft_projects') || '[]');
-        let customFields = JSON.parse(localStorage.getItem('bytedraft_fields') || '[]');
-        let versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
-        let customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
+        let projects = safeParseJSON(localStorage.getItem('bytedraft_projects'), []);
+        let customFields = safeParseJSON(localStorage.getItem('bytedraft_fields'), []);
+        let versionHistory = safeParseJSON(localStorage.getItem('bytedraft_versions'), []);
+        let customChangelog = safeParseJSON(localStorage.getItem('bytedraft_custom_changelog'), {});
         // Migration: un-double-encode changelog entries saved by older versions
         Object.keys(customChangelog).forEach(key => {
             if (typeof customChangelog[key] === 'string') {
@@ -13,6 +13,11 @@
         });
 
         let _storageWarned = false;  // warn once per session when storage approaches 80%
+
+        function safeParseJSON(value, fallback) {
+            try { return value ? JSON.parse(value) : fallback; }
+            catch (e) { return fallback; }
+        }
 
         function escapeHtml(str) {
             if (!str) return '';
@@ -40,16 +45,14 @@
             const okClass = (options && options.okClass) || 'btn-danger';
             document.getElementById('confirmModalTitle').textContent = title;
             document.getElementById('confirmModalMessage').textContent = message;
-            const okBtn = document.getElementById('confirmModalOkBtn');
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
+            // Clone the button to atomically remove all prior click listeners
+            const oldBtn = document.getElementById('confirmModalOkBtn');
+            const okBtn = oldBtn.cloneNode(true);
+            oldBtn.replaceWith(okBtn);
             okBtn.textContent = okLabel;
             okBtn.className = 'btn ' + okClass;
-            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
-            const handler = () => {
-                modal.hide();
-                okBtn.removeEventListener('click', handler);
-                onConfirm();
-            };
-            okBtn.addEventListener('click', handler);
+            okBtn.addEventListener('click', () => { modal.hide(); onConfirm(); }, { once: true });
             modal.show();
         }
 
@@ -72,6 +75,8 @@
             } catch (e) {
                 if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
                     showToast('Storage limit reached. Remove large images or export old projects.', 'error');
+                } else {
+                    showToast('Storage error. Data may not have been saved.', 'error');
                 }
             }
         }
@@ -120,13 +125,13 @@
             const isCollapsed = body.style.display === 'none';
             body.style.display = isCollapsed ? '' : 'none';
             if (chevron) chevron.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
-            const states = JSON.parse(localStorage.getItem('bytedraft_sidebar_collapse') || '{}');
+            const states = safeParseJSON(localStorage.getItem('bytedraft_sidebar_collapse'), {});
             states[key] = !isCollapsed;
             safeSetItem('bytedraft_sidebar_collapse', JSON.stringify(states));
         }
 
         function initSidebarCollapse() {
-            const states = JSON.parse(localStorage.getItem('bytedraft_sidebar_collapse') || '{}');
+            const states = safeParseJSON(localStorage.getItem('bytedraft_sidebar_collapse'), {});
             ['projects', 'toc', 'templates', 'fields'].forEach(key => {
                 if (states[key] === true) {
                     const body = document.getElementById(`sidebar-${key}-body`);
@@ -286,12 +291,15 @@
         }
 
         function renderSections() {
+            updateAllSectionContents(); // Sync editors before destroying them
             tinymce.remove(); // Clean up all TinyMCE editors before re-rendering
             if (!currentProject) return;
             const container = document.getElementById('sectionsContainer');
             container.innerHTML = '';
             
-            // Add drop zone to container
+            // Add drop zone to container (remove first to prevent stacking)
+            container.removeEventListener('dragover', handleDragOver);
+            container.removeEventListener('drop', handleDrop);
             container.addEventListener('dragover', handleDragOver);
             container.addEventListener('drop', handleDrop);
             
@@ -475,10 +483,12 @@
             
             // Add mousedown event to drag handle to prevent text selection
             const dragHandle = nodeDiv.querySelector('.drag-handle');
-            dragHandle.addEventListener('mousedown', (e) => {
-                // Prevent text selection during drag
-                e.preventDefault();
-            });
+            if (dragHandle) {
+                dragHandle.addEventListener('mousedown', (e) => {
+                    // Prevent text selection during drag
+                    e.preventDefault();
+                });
+            }
             
             // Initialize TinyMCE
             const isDarkTheme = currentTheme === 'dark';
@@ -549,9 +559,11 @@
             // Render children
             if (node.subsections && node.subsections.length > 0) {
                 const subContainer = nodeDiv.querySelector(`#subsections-${path.join('-')}`);
-                node.subsections.forEach((sub, idx) => {
-                    renderSubsectionTree(sub, path.concat(idx), subContainer, depth + 1);
-                });
+                if (subContainer) {
+                    node.subsections.forEach((sub, idx) => {
+                        renderSubsectionTree(sub, path.concat(idx), subContainer, depth + 1);
+                    });
+                }
             }
         }
         // Helper functions for recursive data access
@@ -714,6 +726,7 @@
         }
 
         function updateProjectStatus(projectId, newStatus) {
+            if (!['draft', 'working', 'publish'].includes(newStatus)) return;
             const project = projects.find(p => p.id === projectId);
             if (project) {
                 project.status = newStatus;
@@ -739,12 +752,7 @@
                 renderProjects();
                 
                 // Show success message
-                const toast = document.createElement('div');
-                toast.className = 'alert alert-success position-fixed';
-                toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
-                toast.textContent = `Project status updated to ${newStatus}!`;
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3000);
+                showToast('Project status updated to ' + newStatus + '!', 'success');
             }
         }
 
@@ -841,9 +849,11 @@
                 // Live-update the badge when the name input changes
                 const nameInput = fieldDiv.querySelector('input');
                 const badge = fieldDiv.querySelector(`#field-badge-${field.id}`);
-                nameInput.addEventListener('input', function() {
-                    badge.innerHTML = '&#123;&#123;' + escapeHtml(this.value) + '&#125;&#125;';
-                });
+                if (nameInput && badge) {
+                    nameInput.addEventListener('input', function() {
+                        badge.innerHTML = '&#123;&#123;' + escapeHtml(this.value) + '&#125;&#125;';
+                    });
+                }
 
                 container.appendChild(fieldDiv);
             });
@@ -1065,7 +1075,7 @@
                 return;
             }
             // Load from localStorage or project
-            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            let headerFooter = safeParseJSON(localStorage.getItem('bytedraft_header_footer'), {});
             let projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
             document.getElementById('headerContent').value = projectHeaderFooter.header || '';
             document.getElementById('footerContent').value = projectHeaderFooter.footer || '';
@@ -1074,7 +1084,7 @@
         }
         function saveHeaderFooter() {
             if (!currentProject) return;
-            let headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
+            let headerFooter = safeParseJSON(localStorage.getItem('bytedraft_header_footer'), {});
             headerFooter[currentProject.id] = {
                 header: document.getElementById('headerContent').value,
                 footer: document.getElementById('footerContent').value
@@ -1129,12 +1139,12 @@
             }
 
             // Get additional project data from localStorage
-            const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
-            const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
-            const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
-            const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
-            const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
-            const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const allDocInfo = safeParseJSON(localStorage.getItem('bytedraft_docinfo'), {});
+            const allCustomChangelog = safeParseJSON(localStorage.getItem('bytedraft_custom_changelog'), {});
+            const allHeaderFooter = safeParseJSON(localStorage.getItem('bytedraft_header_footer'), {});
+            const allVersionHistory = safeParseJSON(localStorage.getItem('bytedraft_versions'), []);
+            const allLogos = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
+            const allPageSettings = safeParseJSON(localStorage.getItem('bytedraft_page_settings'), {});
 
             // Filter version history for this specific project
             const projectVersionHistory = allVersionHistory.filter(v => v.projectId === projectId);
@@ -1219,12 +1229,12 @@
                     projects.push(importedProject);
                     
                     // Save additional data to localStorage
-                    const allDocInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
-                    const allCustomChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
-                    const allHeaderFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
-                    const allVersionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
-                    const allLogos = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
-                    const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+                    const allDocInfo = safeParseJSON(localStorage.getItem('bytedraft_docinfo'), {});
+                    const allCustomChangelog = safeParseJSON(localStorage.getItem('bytedraft_custom_changelog'), {});
+                    const allHeaderFooter = safeParseJSON(localStorage.getItem('bytedraft_header_footer'), {});
+                    const allVersionHistory = safeParseJSON(localStorage.getItem('bytedraft_versions'), []);
+                    const allLogos = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
+                    const allPageSettings = safeParseJSON(localStorage.getItem('bytedraft_page_settings'), {});
 
                     allDocInfo[importedProject.id] = documentInfo;
                     // Migrate imported changelog from possible double-encoded format
@@ -1264,8 +1274,8 @@
                     selectProject(importedProject.id);
                     
                     // Refresh the global variables to include the imported data
-                    customChangelog = JSON.parse(localStorage.getItem('bytedraft_custom_changelog') || '{}');
-                    versionHistory = JSON.parse(localStorage.getItem('bytedraft_versions') || '[]');
+                    customChangelog = safeParseJSON(localStorage.getItem('bytedraft_custom_changelog'), {});
+                    versionHistory = safeParseJSON(localStorage.getItem('bytedraft_versions'), []);
                     
                     // Update the document info display if the modal is open
                     const docInfoModal = document.getElementById('documentInfoModal');
@@ -1292,7 +1302,10 @@
                     showToast('Error importing project: Invalid JSON file', 'error');
                 }
             };
-            
+            reader.onerror = function() {
+                showToast('Failed to read file. Please try again.', 'error');
+            };
+
             reader.readAsText(file);
             
             // Reset the file input
@@ -1301,7 +1314,7 @@
 
         // Document Info Table Storage Helpers
         function getDocumentInfo(projectId) {
-            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            const allInfo = safeParseJSON(localStorage.getItem('bytedraft_docinfo'), {});
             return allInfo[projectId] || {
                 title: '',
                 author: '',
@@ -1315,7 +1328,7 @@
             };
         }
         function setDocumentInfo(projectId, info) {
-            const allInfo = JSON.parse(localStorage.getItem('bytedraft_docinfo') || '{}');
+            const allInfo = safeParseJSON(localStorage.getItem('bytedraft_docinfo'), {});
             allInfo[projectId] = info;
             safeSetItem('bytedraft_docinfo', JSON.stringify(allInfo));
         }
@@ -1383,7 +1396,7 @@
             const toc = generateTOC();
             if (!currentProject || !toc.length) return toc.map(() => '');
 
-            const settings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const settings = safeParseJSON(localStorage.getItem('bytedraft_page_settings'), {});
             const ps = settings[currentProject.id] || {};
             const charsPerLine = parseInt(ps.charsPerLine) || 80;
             const linesPerPage = parseInt(ps.linesPerPage) || 40;
@@ -1778,7 +1791,7 @@
             }
             
             // Load current page settings
-            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const pageSettings = safeParseJSON(localStorage.getItem('bytedraft_page_settings'), {});
             const projectSettings = pageSettings[currentProject.id] || {
                 paperSize: 'letter',
                 charsPerLine: 80,
@@ -1801,7 +1814,7 @@
 
         function autoSavePageSettings() {
             if (!currentProject) return;
-            const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const pageSettings = safeParseJSON(localStorage.getItem('bytedraft_page_settings'), {});
             pageSettings[currentProject.id] = {
                 paperSize: document.getElementById('paperSize').value,
                 charsPerLine: parseInt(document.getElementById('charsPerLine').value),
@@ -1836,7 +1849,7 @@
                 displayLogoPreview(logoData);
                 
                 // Store logo data
-                const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+                const logoStorage = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
                 logoStorage[currentProject.id] = logoData;
                 safeSetItem('bytedraft_logos', JSON.stringify(logoStorage));
                 
@@ -1855,7 +1868,7 @@
         function loadLogoPreview() {
             if (!currentProject) return;
             
-            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const logoStorage = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
             const logoData = logoStorage[currentProject.id];
             
             if (logoData) {
@@ -1872,7 +1885,7 @@
         function removeLogo() {
             if (!currentProject) return;
             
-            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const logoStorage = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
             delete logoStorage[currentProject.id];
             safeSetItem('bytedraft_logos', JSON.stringify(logoStorage));
             
@@ -1892,19 +1905,19 @@
         }
 
         function getProjectLogo(projectId) {
-            const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
+            const logoStorage = safeParseJSON(localStorage.getItem('bytedraft_logos'), {});
             return logoStorage[projectId] || null;
         }
 
         // ── Citation Manager ──────────────────────────────────────────────────
 
         function getCitations(projectId) {
-            const all = JSON.parse(localStorage.getItem('bytedraft_references') || '{}');
+            const all = safeParseJSON(localStorage.getItem('bytedraft_references'), {});
             return all[projectId] || [];
         }
 
         function saveCitations(projectId, refs) {
-            const all = JSON.parse(localStorage.getItem('bytedraft_references') || '{}');
+            const all = safeParseJSON(localStorage.getItem('bytedraft_references'), {});
             all[projectId] = refs;
             safeSetItem('bytedraft_references', JSON.stringify(all));
         }

@@ -72,6 +72,16 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.4
+- **Fix**: `safeParseJSON()` helper — all 30+ raw `JSON.parse(localStorage.getItem(...))` calls replaced; corrupted localStorage data no longer crashes the app on load, falling back to empty state instead
+- **Fix**: TinyMCE content sync before re-render — `renderSections()` now calls `updateAllSectionContents()` before `tinymce.remove()` so in-flight edits are never lost when a drag-drop or theme toggle triggers a re-render
+- **Fix**: Drag listener stacking — `dragover` / `drop` handlers are removed before being added in `renderSections()` so N re-renders no longer produce N stacked handlers on the sections container
+- **Fix**: `showConfirm()` callback stacking — the OK button is replaced with a `cloneNode(true)` copy on each call, atomically wiping prior listeners; a single `{ once: true }` handler is attached to the fresh clone
+- **Fix**: Null guards — `dragHandle`, `subContainer`, and the `nameInput` / `badge` pair in `renderCustomFields` are each checked before use, preventing runtime crashes when a querySelector returns null
+- **Fix**: `FileReader.onerror` handler added in `handleJSONImport()` — a failed file read now surfaces a toast instead of silently doing nothing
+- **Fix**: `safeSetItem()` now catches all storage errors — non-quota exceptions (e.g. private browsing restrictions) show a generic "Storage error" toast instead of failing silently
+- **Fix**: `updateProjectStatus()` validates the status value against `['draft', 'working', 'publish']` before mutating state; replaced the inline toast div with `showToast()`
+
 ### v1.3.3
 - **Fix**: Proactive localStorage warning — `safeSetItem()` now measures current storage usage before each write; a yellow toast appears once per session when usage reaches 80% of the 5 MB quota (~4 MB), prompting the user to remove logos or export old projects before hitting the hard limit
 - **Fix**: Bootstrap modal instance leak — every `new bootstrap.Modal(el)` replaced with `bootstrap.Modal.getOrCreateInstance(el)`, and a single delegated `hidden.bs.modal` listener calls `.dispose()` after every modal closes; prevents event-listener accumulation over long sessions
@@ -450,5 +460,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.3
+**Version** 1.3.4
 © 2026 - Built for offline productivity
