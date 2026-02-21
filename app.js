@@ -1745,9 +1745,8 @@
             new bootstrap.Modal(document.getElementById('pageSettingsModal')).show();
         }
 
-        function savePageSettings() {
+        function autoSavePageSettings() {
             if (!currentProject) return;
-            
             const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
             pageSettings[currentProject.id] = {
                 paperSize: document.getElementById('paperSize').value,
@@ -1756,14 +1755,14 @@
                 headerHeight: parseInt(document.getElementById('headerHeight').value),
                 paragraphSpacing: parseInt(document.getElementById('paragraphSpacing').value)
             };
-            
             safeSetItem('bytedraft_page_settings', JSON.stringify(pageSettings));
-            
-            // Save logo if exists
+        }
+
+        function savePageSettings() {
+            if (!currentProject) return;
+            autoSavePageSettings();
             saveLogo();
-            
             bootstrap.Modal.getInstance(document.getElementById('pageSettingsModal')).hide();
-            
             showToast('Page settings saved.', 'success');
         }
 
