@@ -20,6 +20,8 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Auto-updating Table of Contents**: Word-compatible TOC field that updates automatically
 - **Citation Manager**: Insert numbered inline citations `[1]`, `[2]` via a toolbar button and manage the full reference list through a dedicated modal; a formatted References page is automatically appended to DOCX exports
 - **Footnotes & Endnotes**: Insert footnote `[fn]` (blue) or endnote `[en]` (purple) superscript markers via a dedicated toolbar button; markers are numbered sequentially at DOCX export time and collected onto dedicated Footnotes and Endnotes pages (omitted if none exist)
+- **Figure Numbering**: Insert captioned figures with the `[Fig]` toolbar button — opens a modal to pick an image file and enter a caption; inserts a `<figure>` block with a styled italic caption beneath the image; captions are numbered "Figure 1: …" sequentially at export time and a "List of Figures" page is appended to DOCX (omitted when none exist)
+- **Table Caption Numbering**: Add a caption above any table with the `[TblCap]` toolbar button — click inside a table, open the modal, enter a caption; captions are numbered "Table 1: …" sequentially at export time and a "List of Tables" page is appended to DOCX (omitted when none exist)
 - **Section Annotations**: Add, resolve, and delete review comments on any section or subsection; persisted in JSON exports, excluded from DOCX
 - **Professional Templates**: Pre-built templates for various document types
 - **Version History**: Track changes and document evolution
@@ -47,6 +49,7 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Custom Headers/Footers**: Support for `{{title}}` and `{{page}}` variables with table-based layout
 - **Document Logo Support**: Upload and embed custom logos in DOCX title pages
 - **Multi-section Export**: Title page, changelog, and TOC without headers/footers; main content with custom headers/footers
+- **List of Figures / List of Tables**: Automatically appended pages (blue titles) listing all captioned figures and tables with their sequential numbers; each page is omitted from the DOCX when no captions of that type exist
 
 ### 🎨 **User Interface**
 - **"Slate Pro" Design System**: Refined, professional dark-first UI with indigo accent colors and DM Sans typography
@@ -72,6 +75,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v1.5.0
+- **Feature**: Figure numbering — `[Fig]` TinyMCE toolbar button opens a modal to select an image file and enter a caption; inserts a `<figure class="bd-fig">` block with a styled italic `<figcaption>` beneath the image; figures are stored with `extended_valid_elements` support and survive saves/re-renders
+- **Feature**: Table caption numbering — `[TblCap]` TinyMCE toolbar button opens a modal to enter a caption; inserts a `<p class="bd-tabcap">` immediately above the table the cursor is in
+- **Export**: `resolveCaptions()` pre-pass (DOMParser, same pattern as `resolveNotes`) numbers all `figcaption.bd-figcap` elements as "Figure 1: …", "Figure 2: …" and all `p.bd-tabcap` elements as "Table 1: …", "Table 2: …" sequentially in document order before DOCX conversion
+- **Export**: "List of Figures" and "List of Tables" pages (blue titles) are appended after main content and before Footnotes/References; each page is omitted entirely when no captions of that type exist in the project
+- **Export**: `processNode` extended with a `case 'figure':` handler that renders the embedded image then an italic centred caption paragraph; `case 'p':` gains a `bd-tabcap` guard that renders an italic above-table label paragraph
 
 ### v1.4.0
 - **Feature**: Footnotes & Endnotes — a new `[N]` TinyMCE toolbar button opens a modal to insert footnote (`[fn]`, blue) or endnote (`[en]`, purple) superscript markers at the cursor; markers are stored as `<sup class="bd-fn">` with `data-note-type` and `data-note` attributes, styled with accent colours in the editor, and preserved across saves via `extended_valid_elements: 'sup[*]'`
@@ -471,5 +481,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.4.0
+**Version** 1.5.0
 © 2026 - Built for offline productivity

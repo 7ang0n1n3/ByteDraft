@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="1.4.0">
+    <meta name="version" content="1.5.0">
     <title>ByteDraft — Technical Documentation</title>
 
     <!-- Bootstrap CSS -->
@@ -1990,6 +1990,57 @@
         });
     })();
     </script>
+
+    <!-- Figure Modal -->
+    <div class="modal fade" id="figureModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="fas fa-image me-2"></i>Insert Figure</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="figureImageInput" class="form-label fw-semibold">Image File</label>
+              <input type="file" id="figureImageInput" class="form-control" accept="image/*">
+            </div>
+            <div class="mb-3">
+              <label for="figureCaptionInput" class="form-label fw-semibold">Caption</label>
+              <input type="text" id="figureCaptionInput" class="form-control"
+                     placeholder="e.g. System architecture overview">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="insertFigure()">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Caption Modal -->
+    <div class="modal fade" id="tableCaptionModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="fas fa-table me-2"></i>Add Table Caption</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="tableCaptionInput" class="form-label fw-semibold">Caption</label>
+              <input type="text" id="tableCaptionInput" class="form-control"
+                     placeholder="e.g. Summary of test results">
+              <div class="form-text">Caption will appear above the table.</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="insertTableCaption()">Insert</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Footnote / Endnote Modal -->
     <div class="modal fade" id="noteModal" tabindex="-1">

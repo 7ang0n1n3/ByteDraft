@@ -367,6 +367,23 @@
                 sup.bd-fn[data-note-type="endnote"] {
                     color: #6f42c1; font-weight: bold; cursor: help;
                 }
+                figure.bd-fig {
+                    margin: 1.5em auto; text-align: center; display: block;
+                }
+                figure.bd-fig img {
+                    max-width: 100%; display: block; margin: 0 auto;
+                    border: 1px solid ${isDark ? '#495057' : '#dee2e6'}; border-radius: 4px;
+                }
+                figcaption.bd-figcap {
+                    font-size: 0.88em; font-style: italic;
+                    color: ${isDark ? '#adb5bd' : '#6c757d'};
+                    margin-top: 0.4em; text-align: center;
+                }
+                p.bd-tabcap {
+                    font-size: 0.88em; font-style: italic;
+                    color: ${isDark ? '#adb5bd' : '#6c757d'};
+                    margin-bottom: 0.25em; text-align: left;
+                }
             `;
         }
 
@@ -386,9 +403,9 @@
                 ],
                 toolbar: [
                     'undo redo | formatselect | bold italic underline strikethrough',
-                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref | insertfield | note'
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref | insertfield | note | figure | tabcap'
                 ].join(' | '),
-                extended_valid_elements: 'sup[*]',
+                extended_valid_elements: 'sup[*],figure[*],figcaption[*]',
                 font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
                 font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
                 content_style: buildTinyMCEContentStyle(isDark),
@@ -510,10 +527,12 @@
                         showFindReplaceModal();
                     });
                     const _icons = window.bytedraftIcons || {};
-                    editor.ui.registry.addIcon('bytedraft-cite',  _icons.cite  || '[Cite]');
-                    editor.ui.registry.addIcon('bytedraft-xref',  _icons.xref  || '[XRef]');
-                    editor.ui.registry.addIcon('bytedraft-field', _icons.field || '{{}}');
-                    editor.ui.registry.addIcon('bytedraft-note',  _icons.note  || '[N]');
+                    editor.ui.registry.addIcon('bytedraft-cite',   _icons.cite   || '[Cite]');
+                    editor.ui.registry.addIcon('bytedraft-xref',   _icons.xref   || '[XRef]');
+                    editor.ui.registry.addIcon('bytedraft-field',  _icons.field  || '{{}}');
+                    editor.ui.registry.addIcon('bytedraft-note',   _icons.note   || '[N]');
+                    editor.ui.registry.addIcon('bytedraft-figure', _icons.figure || '[Fig]');
+                    editor.ui.registry.addIcon('bytedraft-tabcap', _icons.tabcap || '[Tbl]');
                     editor.ui.registry.addMenuButton('insertfield', {
                         icon: 'bytedraft-field',
                         tooltip: 'Insert field placeholder',
@@ -553,6 +572,22 @@
                         onAction: function() {
                             window._activeNoteEditor = editor;
                             showNoteModal();
+                        }
+                    });
+                    editor.ui.registry.addButton('figure', {
+                        icon: 'bytedraft-figure',
+                        tooltip: 'Insert captioned figure',
+                        onAction: function() {
+                            window._activeFigEditor = editor;
+                            showFigureModal();
+                        }
+                    });
+                    editor.ui.registry.addButton('tabcap', {
+                        icon: 'bytedraft-tabcap',
+                        tooltip: 'Add caption to table',
+                        onAction: function() {
+                            window._activeFigEditor = editor;
+                            showTableCaptionModal();
                         }
                     });
                     editor.on('BeforeExecCommand', function(e) {
@@ -2113,6 +2148,62 @@
                 'data-note="' + escaped + '" contenteditable="false">' + label + '</sup>'
             );
             bootstrap.Modal.getInstance(document.getElementById('noteModal')).hide();
+        }
+
+        function showFigureModal() {
+            if (!currentProject) { showToast('Please select a project first', 'warning'); return; }
+            document.getElementById('figureImageInput').value = '';
+            document.getElementById('figureCaptionInput').value = '';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('figureModal')).show();
+            setTimeout(() => document.getElementById('figureCaptionInput').focus(), 300);
+        }
+
+        function insertFigure() {
+            const editor = window._activeFigEditor;
+            if (!editor) { showToast('No active editor — click inside a section first', 'warning'); return; }
+            const fileInput = document.getElementById('figureImageInput');
+            const caption = document.getElementById('figureCaptionInput').value.trim();
+            if (!fileInput.files || !fileInput.files[0]) { showToast('Please select an image file', 'warning'); return; }
+            if (!caption) { showToast('Please enter a caption', 'warning'); return; }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onerror = () => showToast('Failed to read image file', 'danger');
+            reader.onload = function(e) {
+                const src = e.target.result;
+                const escapedCaption = caption.replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+                                               .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                editor.insertContent(
+                    '<figure class="bd-fig">' +
+                    '<img src="' + src + '" style="max-width:100%;" alt="' + escapedCaption + '">' +
+                    '<figcaption class="bd-figcap">' + escapedCaption + '</figcaption>' +
+                    '</figure>'
+                );
+                bootstrap.Modal.getInstance(document.getElementById('figureModal')).hide();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function showTableCaptionModal() {
+            const editor = window._activeFigEditor;
+            if (!editor) { showToast('No active editor — click inside a section first', 'warning'); return; }
+            const table = editor.dom.getParent(editor.selection.getNode(), 'table');
+            if (!table) { showToast('Click inside a table to add a caption', 'warning'); return; }
+            document.getElementById('tableCaptionInput').value = '';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('tableCaptionModal')).show();
+            setTimeout(() => document.getElementById('tableCaptionInput').focus(), 300);
+        }
+
+        function insertTableCaption() {
+            const editor = window._activeFigEditor;
+            if (!editor) { showToast('No active editor', 'warning'); return; }
+            const caption = document.getElementById('tableCaptionInput').value.trim();
+            if (!caption) { showToast('Caption cannot be empty', 'warning'); return; }
+            const table = editor.dom.getParent(editor.selection.getNode(), 'table');
+            if (!table) { showToast('No table found — click inside a table first', 'warning'); return; }
+            const capEl = editor.dom.create('p', { 'class': 'bd-tabcap' }, caption);
+            table.parentNode.insertBefore(capEl, table);
+            editor.nodeChanged();
+            bootstrap.Modal.getInstance(document.getElementById('tableCaptionModal')).hide();
         }
 
         function insertCrossRef(path, label) {

@@ -26,8 +26,11 @@ class ModernDocxExporter {
             // Extract footnote/endnote markers, number them, and strip custom attrs
             const { html: notesHtml, footnotes, endnotes } = this.resolveNotes(resolvedContent);
 
+            // Number figure and table captions sequentially
+            const { html: captionsHtml, figures, tables } = this.resolveCaptions(notesHtml);
+
             // Clean up the content for better DOCX conversion
-            const cleanedContent = this.cleanContentForDocx(notesHtml);
+            const cleanedContent = this.cleanContentForDocx(captionsHtml);
 
             // Convert HTML to DOCX elements
             const docxElements = this.htmlToDocxElements(cleanedContent);
@@ -196,6 +199,12 @@ class ModernDocxExporter {
 
                             // Main content
                             ...docxElements,
+
+                            // List of Figures (only if figures exist)
+                            ...this.createListPage(figures, 'List of Figures', '2563eb'),
+
+                            // List of Tables (only if tables exist)
+                            ...this.createListPage(tables, 'List of Tables', '2563eb'),
 
                             // Footnotes page (only if footnotes exist)
                             ...this.createNotesPage(footnotes, 'Footnotes', '0d6efd'),
@@ -616,6 +625,18 @@ class ModernDocxExporter {
                     }));
                     break;
                 case 'p': {
+                    if (node.classList && node.classList.contains('bd-tabcap')) {
+                        const text = node.textContent.trim();
+                        if (text) {
+                            elements.push(new this.docx.Paragraph({
+                                children: [new this.docx.TextRun({
+                                    text, italics: true, size: 20, color: '6c757d'
+                                })],
+                                spacing: { before: 200, after: 80 }
+                            }));
+                        }
+                        break;
+                    }
                     const textAlign = this.getTextAlignment(node);
                     const imgElements = node.querySelectorAll('img');
                     if (imgElements.length > 0) {
@@ -655,6 +676,24 @@ class ModernDocxExporter {
     
                     this.processImage(node, elements);
                     break;
+                case 'figure': {
+                    const img = node.querySelector('img');
+                    if (img) this.processImage(img, elements);
+                    const cap = node.querySelector('figcaption');
+                    if (cap && cap.textContent.trim()) {
+                        elements.push(new this.docx.Paragraph({
+                            children: [new this.docx.TextRun({
+                                text: cap.textContent.trim(),
+                                italics: true,
+                                size: 20,
+                                color: '6c757d'
+                            })],
+                            alignment: this.docx.AlignmentType.CENTER,
+                            spacing: { before: 80, after: 200 }
+                        }));
+                    }
+                    break;
+                }
                 case 'blockquote':
                     this.processBlockquote(node, elements);
                     break;
@@ -2244,6 +2283,55 @@ class ModernDocxExporter {
             elements.push(new this.docx.Paragraph({
                 children: [new this.docx.TextRun({
                     text: '[' + n.num + '] ' + n.text, font: 'Calibri', size: 22
+                })],
+                spacing: { after: 160 },
+                indent: { left: 360, hanging: 360 }
+            }));
+        });
+        return elements;
+    }
+
+    resolveCaptions(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const figures = [];
+        const tables  = [];
+        let figCount = 0, tblCount = 0;
+
+        doc.querySelectorAll('figure.bd-fig figcaption.bd-figcap').forEach(cap => {
+            figCount++;
+            const original = cap.textContent.trim();
+            figures.push({ num: figCount, caption: original });
+            cap.textContent = 'Figure ' + figCount + ': ' + original;
+        });
+
+        doc.querySelectorAll('p.bd-tabcap').forEach(p => {
+            tblCount++;
+            const original = p.textContent.trim();
+            tables.push({ num: tblCount, caption: original });
+            p.textContent = 'Table ' + tblCount + ': ' + original;
+        });
+
+        return { html: doc.body.innerHTML, figures, tables };
+    }
+
+    createListPage(items, title, color) {
+        if (!items || items.length === 0) return [];
+        const elements = [
+            new this.docx.Paragraph({ text: '', pageBreakBefore: true }),
+            new this.docx.Paragraph({
+                children: [new this.docx.TextRun({
+                    text: title, size: 48, font: 'Calibri', bold: true, color: color || '2563eb'
+                })],
+                spacing: { before: 200, after: 400 }
+            })
+        ];
+        items.forEach(item => {
+            const prefix = typeof item.num === 'number'
+                ? (title.startsWith('List of Figures') ? 'Figure ' : 'Table ') + item.num + ': '
+                : item.num + ': ';
+            elements.push(new this.docx.Paragraph({
+                children: [new this.docx.TextRun({
+                    text: prefix + item.caption, font: 'Calibri', size: 22
                 })],
                 spacing: { after: 160 },
                 indent: { left: 360, hanging: 360 }
