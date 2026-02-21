@@ -87,8 +87,8 @@
         // Downscales only if wider or taller than maxDim; sets white canvas background
         // so PNG transparency doesn't become black in JPEG.
         function compressImage(dataUrl, maxDim, quality) {
-            maxDim  = maxDim  || 1920;
-            quality = quality || 0.82;
+            maxDim  = maxDim  || 320;
+            quality = quality || 0.85;
             return new Promise(function(resolve) {
                 const img = new Image();
                 img.onload = function() {
