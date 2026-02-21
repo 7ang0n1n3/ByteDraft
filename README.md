@@ -72,6 +72,12 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.1
+- **Fix**: All 16 native `alert()` / `confirm()` dialogs replaced — validation errors and status messages now surface as centered toast notifications; the delete-project confirmation uses a Bootstrap modal (`#confirmModal`) with Cancel / Delete buttons so the browser never blocks the UI thread
+- **Fix**: Cross-reference spans now export correctly to DOCX — previously `span.xref[data-path]` elements were stripped to plain text; they are now re-resolved before export (current section title and number), styled blue + underlined, and passed through `extractSpanProps()` so the resulting `TextRun` carries the correct color and underline in the Word document
+- **Fix**: Drag-and-drop `handleDrop()` wrapped in try-catch-finally — a failed tree mutation no longer leaves `draggedElement` / `draggedPath` set, preventing a stale-drag lock; on error a toast is shown and `renderSections()` re-syncs the DOM to the data model
+- **Cleanup**: Removed 11 debug `console.log` calls from drag-and-drop functions (`handleDragEnd`, `handleDrop`, `moveNodeByPath`)
+
 ### v1.3.0
 - **Improvement**: Page Settings auto-save — all fields (paper size, chars per line, lines per page, header height, paragraph spacing) are written to localStorage the moment a value changes; settings persist across page refreshes without requiring the Save button
 
@@ -433,5 +439,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.0
+**Version** 1.3.1
 © 2026 - Built for offline productivity

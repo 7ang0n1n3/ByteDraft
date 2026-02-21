@@ -20,8 +20,11 @@ class ModernDocxExporter {
             // Note: field placeholder substitution has already been applied by the caller
             const allContent = this.collectAllContent(project);
 
+            // Re-resolve cross-reference spans to current titles before cleaning
+            const resolvedContent = this.resolveXRefs(allContent, project);
+
             // Clean up the content for better DOCX conversion
-            const cleanedContent = this.cleanContentForDocx(allContent);
+            const cleanedContent = this.cleanContentForDocx(resolvedContent);
             
             // Convert HTML to DOCX elements
             const docxElements = this.htmlToDocxElements(cleanedContent);
@@ -256,6 +259,63 @@ class ModernDocxExporter {
         }
         
         return content;
+    }
+
+    // Walk the project sections tree by a numeric path array (0-based indices).
+    // Returns the node at that path, or null if the path is invalid.
+    getProjectNodeByPath(project, path) {
+        if (!project || !project.sections || !path || path.length === 0) return null;
+        let node = project.sections[path[0]];
+        for (let i = 1; i < path.length; i++) {
+            if (!node || !node.subsections) return null;
+            node = node.subsections[path[i]];
+        }
+        return node || null;
+    }
+
+    // Build a "1.2.3" section number string from a 0-based path array.
+    getProjectSectionNumber(project, path) {
+        if (!path || path.length === 0) return '';
+        return path.map(idx => idx + 1).join('.');
+    }
+
+    // Re-resolve all cross-reference spans in the HTML string.
+    // Spans matching span[data-path] or span.xref have their text updated to
+    // "Section X.Y.Z — Current Title" and are styled blue+underline so that
+    // extractSpanProps() carries those properties through to DOCX TextRuns.
+    // Uses DOMParser to avoid direct innerHTML assignment on untrusted strings.
+    resolveXRefs(html, project) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const xrefSpans = doc.querySelectorAll('span[data-path], span.xref');
+        xrefSpans.forEach(span => {
+            const rawPath = span.getAttribute('data-path');
+            if (!rawPath) return;
+
+            let pathArray;
+            try {
+                pathArray = JSON.parse(rawPath);
+            } catch (e) {
+                return;
+            }
+            if (!Array.isArray(pathArray)) return;
+
+            const node = this.getProjectNodeByPath(project, pathArray);
+            if (node) {
+                const num = this.getProjectSectionNumber(project, pathArray);
+                span.textContent = `Section ${num} \u2014 ${node.title}`;
+            }
+
+            // Apply blue underline styling so extractSpanProps() picks it up
+            span.style.color = 'rgb(37, 99, 235)';
+            span.style.textDecoration = 'underline';
+
+            // Strip attributes that are irrelevant in DOCX
+            span.removeAttribute('class');
+            span.removeAttribute('data-path');
+            span.removeAttribute('contenteditable');
+        });
+
+        return doc.body.innerHTML;
     }
 
     cleanContentForDocx(html) {

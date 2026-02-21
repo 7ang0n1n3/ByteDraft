@@ -32,6 +32,25 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function showConfirm(message, onConfirm, options) {
+            const title = (options && options.title) || 'Confirm';
+            const okLabel = (options && options.okLabel) || 'Confirm';
+            const okClass = (options && options.okClass) || 'btn-danger';
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            const okBtn = document.getElementById('confirmModalOkBtn');
+            okBtn.textContent = okLabel;
+            okBtn.className = 'btn ' + okClass;
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const handler = () => {
+                modal.hide();
+                okBtn.removeEventListener('click', handler);
+                onConfirm();
+            };
+            okBtn.addEventListener('click', handler);
+            modal.show();
+        }
+
         function safeSetItem(key, value) {
             try {
                 localStorage.setItem(key, value);
@@ -92,7 +111,7 @@
             const templateKey = document.getElementById('newProjectTemplate').value;
 
             if (!name) {
-                alert('Please enter a project name');
+                showToast('Please enter a project name', 'warning');
                 return;
             }
 
@@ -101,7 +120,7 @@
                 if (templates && templates[templateKey] && Array.isArray(templates[templateKey].sections)) {
                     templateSections = [...templates[templateKey].sections];
                 } else {
-                    alert('Template not found or invalid. Please check templates.js and the template key.');
+                    showToast('Template not found or invalid. Please check templates.js and the template key.', 'error');
                     return;
                 }
             }
@@ -592,45 +611,36 @@
         }
 
         function deleteProject(projectId) {
-            if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-                return;
-            }
-            
-            // Remove from projects array
-            projects = projects.filter(p => p.id !== projectId);
-            saveProjects();
-            
-            // Remove from version history
-            versionHistory = versionHistory.filter(v => v.projectId !== projectId);
-            saveVersionHistory();
-            
-            // Remove custom changelog if exists
-            if (customChangelog[projectId]) {
-                delete customChangelog[projectId];
-                saveCustomChangelog();
-            }
-            
-            // If this was the current project, clear it and refresh the main editor window
-            if (currentProject && currentProject.id === projectId) {
-                currentProject = null;
-                // Update the project title in the top bar
-                document.getElementById('currentProjectTitle').textContent = 'Select a Project';
-                // Refresh the main content area to show the default "select a project" message
-                renderProjectContent();
-                // Clear any TinyMCE editors to prevent memory leaks
-                tinymce.remove();
-            }
-            
-            // Re-render projects list
-            renderProjects();
-            
-            // Show success message
-            const toast = document.createElement('div');
-            toast.className = 'alert alert-info position-fixed';
-                            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
-            toast.textContent = 'Project deleted successfully!';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            showConfirm(
+                'Are you sure you want to delete this project? This action cannot be undone.',
+                function() {
+                    // Remove from projects array
+                    projects = projects.filter(p => p.id !== projectId);
+                    saveProjects();
+
+                    // Remove from version history
+                    versionHistory = versionHistory.filter(v => v.projectId !== projectId);
+                    saveVersionHistory();
+
+                    // Remove custom changelog if exists
+                    if (customChangelog[projectId]) {
+                        delete customChangelog[projectId];
+                        saveCustomChangelog();
+                    }
+
+                    // If this was the current project, clear it and refresh the main editor window
+                    if (currentProject && currentProject.id === projectId) {
+                        currentProject = null;
+                        document.getElementById('currentProjectTitle').textContent = 'Select a Project';
+                        renderProjectContent();
+                        tinymce.remove();
+                    }
+
+                    renderProjects();
+                    showToast('Project deleted.', 'success');
+                },
+                { title: 'Delete Project', okLabel: 'Delete', okClass: 'btn-danger' }
+            );
         }
 
         function updateProjectStatus(projectId, newStatus) {
@@ -711,7 +721,7 @@
             const type = document.getElementById('newFieldType').value;
             
             if (!name) {
-                alert('Please enter a field name');
+                showToast('Please enter a field name', 'warning');
                 return;
             }
 
@@ -795,7 +805,7 @@
         // Export Functions
         async function exportDocument(format) {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
 
@@ -838,7 +848,7 @@
                 console.log('DOCX export completed successfully');
             } catch (error) {
                 console.error('Error in DOCX export:', error);
-                alert('Error creating DOCX file. Please try again.');
+                showToast('Error creating DOCX file. Please try again.', 'error');
             }
         }
 
@@ -858,7 +868,7 @@
         // Version History
         function showVersionHistory() {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
             
@@ -930,7 +940,7 @@
 
         function showCustomChangelogModal() {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
             
@@ -983,7 +993,7 @@
         // Header/Footer Modal logic
         function showHeaderFooterModal() {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
             // Load from localStorage or project
@@ -1046,7 +1056,7 @@
         function exportProjectAsJSON(projectId) {
             const project = projects.find(p => p.id === projectId);
             if (!project) {
-                alert('Project not found');
+                showToast('Project not found', 'error');
                 return;
             }
 
@@ -1094,7 +1104,7 @@
                     
                     // Validate the imported data
                     if (!importData.name || !importData.sections) {
-                        alert('Invalid project file: Missing required fields (name, sections)');
+                        showToast('Invalid project file: Missing required fields (name, sections)', 'error');
                         return;
                     }
 
@@ -1207,11 +1217,11 @@
                         showVersionHistory();
                     }
                     
-                    alert(`Project "${importedProject.name}" imported successfully!`);
+                    showToast(`Project "${importedProject.name}" imported successfully!`, 'success');
                     
                 } catch (error) {
                     console.error('Error importing project:', error);
-                    alert('Error importing project: Invalid JSON file');
+                    showToast('Error importing project: Invalid JSON file', 'error');
                 }
             };
             
@@ -1243,7 +1253,7 @@
         }
         function showDocumentInfoModal() {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
             const info = getDocumentInfo(currentProject.id);
@@ -1551,51 +1561,45 @@
             // Reset drag state
             draggedElement = null;
             draggedPath = null;
-            
-            console.log('Drag ended');
         }
 
         function handleDrop(e) {
             e.preventDefault();
             e.stopPropagation();
-            
-            console.log('Drop event triggered');
-            
+
             const targetElement = e.target.closest('[data-path]');
             if (!targetElement) {
-                console.log('No target element found');
                 return;
             }
-            
+
             if (!draggedElement || !draggedPath) {
-                console.log('No dragged element or path');
                 return;
             }
-            
+
             const targetPath = JSON.parse(targetElement.getAttribute('data-path'));
-            console.log('Target path:', targetPath);
-            
+
             // Remove visual feedback
             draggedElement.style.opacity = '';
             draggedElement.classList.remove('dragging');
             targetElement.classList.remove('drag-over', 'drop-as-child', 'drop-as-section');
-            
+
             // Don't allow dropping on itself
             if (JSON.stringify(draggedPath) === JSON.stringify(targetPath)) {
-                console.log('Dropping on itself, ignoring');
+                draggedElement = null;
+                draggedPath = null;
                 return;
             }
-            
+
             // Determine the intended target based on the drop position
             const rect = targetElement.getBoundingClientRect();
             const dropY = e.clientY;
             const elementCenterY = rect.top + rect.height / 2;
-            
+
             // If dropping in the upper half of the target, insert before it
             // If dropping in the lower half, insert as a child (for sections) or after it (for subsections)
             let insertAsChild = false;
             let finalTargetPath = targetPath;
-            
+
             if (dropY > elementCenterY) {
                 // Dropping in lower half
                 if (targetPath.length === 1) {
@@ -1610,43 +1614,33 @@
                 // Dropping in upper half - insert before the target
                 finalTargetPath = targetPath;
             }
-            
+
             // Special case: if dragging a subsection to a section's upper half, make it a top-level section
             if (draggedPath.length > 1 && targetPath.length === 1 && dropY <= elementCenterY) {
                 insertAsChild = false;
                 finalTargetPath = targetPath; // This will insert before the target section
             }
-            
-            // Move the section/subsection
-            console.log('Moving node:', { 
-                sourcePath: draggedPath, 
-                targetPath: finalTargetPath, 
-                insertAsChild,
-                dropY,
-                elementCenterY,
-                dropPosition: dropY > elementCenterY ? 'lower' : 'upper'
-            });
-            
-            moveNodeByPath(draggedPath, finalTargetPath, insertAsChild);
-            
-            // Reset drag state
-            draggedElement = null;
-            draggedPath = null;
+
+            const sourcePath = draggedPath;
+            try {
+                moveNodeByPath(sourcePath, finalTargetPath, insertAsChild);
+            } catch (err) {
+                showToast('Failed to move section. Please try again.', 'error');
+                renderSections();
+            } finally {
+                draggedElement = null;
+                draggedPath = null;
+            }
         }
 
         function moveNodeByPath(sourcePath, targetPath, insertAsChild = false) {
             if (!currentProject) return;
-            
-            console.log('moveNodeByPath called:', { sourcePath, targetPath, insertAsChild });
             
             // Get the source node
             const sourceNode = getNodeByPath(sourcePath);
             if (!sourceNode) return;
             
             // Special case: if source is a subsection and target is a section, make it a top-level section
-            if (sourcePath.length > 1 && targetPath.length === 1 && !insertAsChild) {
-                console.log('Converting subsection to section level');
-            }
             
             // Clean up TinyMCE editors before moving to prevent path conflicts
             tinymce.remove();
@@ -1694,8 +1688,6 @@
                 targetParent.subsections.splice(targetPath[targetPath.length - 1], 0, sourceNode);
             }
             
-            console.log('Node moved successfully');
-            
             // Re-render sections to update the UI with a small delay to ensure TinyMCE cleanup
             setTimeout(() => {
                 renderSections();
@@ -1706,20 +1698,14 @@
             // Update project timestamp
             currentProject.updatedAt = new Date().toISOString();
             
-            // Show success message
-            const toast = document.createElement('div');
-            toast.className = 'alert alert-success position-fixed';
-            toast.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;';
-            toast.textContent = 'Section reordered successfully!';
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2000);
+            showToast('Section reordered successfully!', 'success');
         }
 
 
         // Page Settings and Logo Functions
         function showPageSettings() {
             if (!currentProject) {
-                alert('Please select a project first');
+                showToast('Please select a project first', 'warning');
                 return;
             }
             
@@ -1772,7 +1758,7 @@
             if (!file) return;
             
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file (PNG, JPG, GIF)');
+                showToast('Please select an image file (PNG, JPG, GIF)', 'warning');
                 return;
             }
             
