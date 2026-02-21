@@ -72,6 +72,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.5
+- **Fix**: TinyMCE toolbar icons for Cite, XRef, and `{{}}` now display correctly — the previous inline SVGs used `xmlns`, `viewBox`, and `fill="currentColor"` which TinyMCE 7 ignores, producing invisible icons; replaced with locally stored SVG files (`libs/icons/`) loaded via `bytedraft-icons.js` in the correct TinyMCE 7 format (`width`/`height` only, no `xmlns`)
+
 ### v1.3.4
 - **Fix**: `safeParseJSON()` helper — all 30+ raw `JSON.parse(localStorage.getItem(...))` calls replaced; corrupted localStorage data no longer crashes the app on load, falling back to empty state instead
 - **Fix**: TinyMCE content sync before re-render — `renderSections()` now calls `updateAllSectionContents()` before `tinymce.remove()` so in-flight edits are never lost when a drag-drop or theme toggle triggers a re-render
@@ -460,5 +463,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.4
+**Version** 1.3.5
 © 2026 - Built for offline productivity
