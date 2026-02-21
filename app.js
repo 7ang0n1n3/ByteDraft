@@ -80,6 +80,18 @@
             initSidebarCollapse();
         });
 
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+                if (e.key === 's') {
+                    e.preventDefault();
+                    if (currentProject) { updateAllSectionContents(); saveProject(); }
+                } else if (e.key === 'f') {
+                    e.preventDefault();
+                    if (currentProject) showFindReplaceModal();
+                }
+            }
+        });
+
         function toggleSidebarSection(key) {
             const body = document.getElementById(`sidebar-${key}-body`);
             const chevron = document.getElementById(`chevron-${key}`);
@@ -407,6 +419,12 @@
                         onclick="removeSubsectionByPath(${JSON.stringify(path)})">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <button id="dupbtn-${pk}" class="btn btn-sm btn-outline-secondary btn-icon"
+                        ${node.locked ? 'disabled' : ''}
+                        title="Duplicate section"
+                        onclick="duplicateSectionByPath(${JSON.stringify(path)})">
+                        <i class="fas fa-copy"></i>
+                    </button>
                     <button id="addbtn-${pk}" class="btn btn-sm btn-outline-primary btn-icon"
                         ${node.locked ? 'disabled' : ''}
                         onclick="addSubsectionByPath(${JSON.stringify(path)})">
@@ -446,6 +464,13 @@
             tinymce.init({
                 ...getTinyMCEBaseConfig(`#editor-${path.join('-')}`, isDarkTheme),
                 setup: function(editor) {
+                    editor.addShortcut('ctrl+s', 'Save project', () => {
+                        updateAllSectionContents();
+                        saveProject();
+                    });
+                    editor.addShortcut('ctrl+f', 'Find & Replace', () => {
+                        showFindReplaceModal();
+                    });
                     editor.ui.registry.addMenuButton('insertfield', {
                         text: '{{}}',
                         tooltip: 'Insert field placeholder',
@@ -558,6 +583,30 @@
                 subsections: []
             });
             renderSections();
+        }
+
+        function assignNewIds(node) {
+            node.id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+            if (node.subsections) node.subsections.forEach(sub => assignNewIds(sub));
+        }
+
+        function duplicateSectionByPath(path) {
+            const source = getNodeByPath(path);
+            if (!source) return;
+            updateAllSectionContents();
+            const clone = JSON.parse(JSON.stringify(source));
+            clone.title = clone.title + ' (Copy)';
+            clone.locked = false;
+            assignNewIds(clone);
+            if (path.length === 1) {
+                currentProject.sections.splice(path[0] + 1, 0, clone);
+            } else {
+                const parent = getNodeByPath(path.slice(0, -1));
+                parent.subsections.splice(path[path.length - 1] + 1, 0, clone);
+            }
+            saveProjectData();
+            renderSections();
+            setTimeout(() => updateTOCPreview(), 100);
         }
 
         function addSection() {
@@ -832,7 +881,6 @@
 
         async function exportToDocx() {
             try {
-                console.log('Starting modern DOCX export...');
                 updateAllSectionContents();
                 saveProject();
 
@@ -845,7 +893,6 @@
                     versionHistory.filter(v => v.projectId === currentProject.id)
                 );
                 
-                console.log('DOCX export completed successfully');
             } catch (error) {
                 console.error('Error in DOCX export:', error);
                 showToast('Error creating DOCX file. Please try again.', 'error');
@@ -1772,8 +1819,6 @@
                 logoStorage[currentProject.id] = logoData;
                 safeSetItem('bytedraft_logos', JSON.stringify(logoStorage));
                 
-                console.log('Logo uploaded and stored for project:', currentProject.id);
-                console.log('Logo data length:', logoData.length);
             };
             reader.readAsDataURL(file);
         }
@@ -1791,9 +1836,6 @@
             
             const logoStorage = JSON.parse(localStorage.getItem('bytedraft_logos') || '{}');
             const logoData = logoStorage[currentProject.id];
-            
-            console.log('Loading logo preview for project:', currentProject.id);
-            console.log('Logo data found:', !!logoData);
             
             if (logoData) {
                 displayLogoPreview(logoData);

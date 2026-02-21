@@ -115,11 +115,7 @@ class ModernDocxExporter {
                                         children: [
                                             new this.docx.Paragraph({
                                                 children: [
-                                                    new this.docx.TextRun({
-                                                        text: footerText.includes('{{page}}') ? '4' : '',
-                                                        size: 16,
-                                                        color: '666666'
-                                                    })
+                                                    new this.docx.SimpleField(' PAGE ', '4')
                                                 ],
                                                 alignment: this.docx.AlignmentType.RIGHT
                                             })

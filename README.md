@@ -72,6 +72,13 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.2
+- **Fix**: Footer page number now always appears in the right cell using Word's native `PAGE` simple field (`<w:fldSimple w:instr=" PAGE ">`); no longer conditional on `{{page}}` being present in the footer template, and no longer relies on the complex field sequence that required Word to auto-update to display a value
+- **Fix**: Removed previous `PageNumber.CURRENT` TextRun approach that produced an empty result when Word did not auto-refresh the field on open
+- **Feature**: Keyboard shortcuts — Ctrl+S (Cmd+S on Mac) saves the project from anywhere in the UI; Ctrl+F (Cmd+F) opens the ByteDraft Find & Replace modal; both shortcuts work whether focus is in a TinyMCE editor or elsewhere on the page (TinyMCE's built-in Ctrl+F is overridden to keep the workflow consistent)
+- **Feature**: Section duplication — each section toolbar now has a copy icon (<i class="fas fa-copy"></i>) that inserts a deep clone of the section (including all subsections and their content) immediately below the original; the clone is titled "… (Copy)", unlocked, and has fresh unique IDs throughout
+- **Cleanup**: Removed 6 remaining debug `console.log` calls (DOCX export start/success messages, logo upload and logo preview functions)
+
 ### v1.3.1
 - **Fix**: All 16 native `alert()` / `confirm()` dialogs replaced — validation errors and status messages now surface as centered toast notifications; the delete-project confirmation uses a Bootstrap modal (`#confirmModal`) with Cancel / Delete buttons so the browser never blocks the UI thread
 - **Fix**: Cross-reference spans now export correctly to DOCX — previously `span.xref[data-path]` elements were stripped to plain text; they are now re-resolved before export (current section title and number), styled blue + underlined, and passed through `extractSpanProps()` so the resulting `TextRun` carries the correct color and underline in the Word document
@@ -439,5 +446,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.1
+**Version** 1.3.2
 © 2026 - Built for offline productivity
