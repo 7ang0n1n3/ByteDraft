@@ -1726,12 +1726,14 @@
             // Load current page settings
             const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
             const projectSettings = pageSettings[currentProject.id] || {
+                paperSize: 'letter',
                 charsPerLine: 80,
                 linesPerPage: 40,
                 headerHeight: 3,
                 paragraphSpacing: 2
             };
-            
+
+            document.getElementById('paperSize').value = projectSettings.paperSize || 'letter';
             document.getElementById('charsPerLine').value = projectSettings.charsPerLine;
             document.getElementById('linesPerPage').value = projectSettings.linesPerPage;
             document.getElementById('headerHeight').value = projectSettings.headerHeight;
@@ -1748,6 +1750,7 @@
             
             const pageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
             pageSettings[currentProject.id] = {
+                paperSize: document.getElementById('paperSize').value,
                 charsPerLine: parseInt(document.getElementById('charsPerLine').value),
                 linesPerPage: parseInt(document.getElementById('linesPerPage').value),
                 headerHeight: parseInt(document.getElementById('headerHeight').value),

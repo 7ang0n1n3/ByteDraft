@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="1.1.0">
+    <meta name="version" content="1.2.0">
     <title>ByteDraft — Technical Documentation</title>
 
     <!-- Bootstrap CSS -->
@@ -1528,10 +1528,21 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Page Numbering Settings</h5>
+                    <h5 class="modal-title">Page Settings</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Paper size</label>
+                        <select class="form-select" id="paperSize">
+                            <option value="letter">US Letter (8.5 × 11 in)</option>
+                            <option value="a4">A4 (210 × 297 mm)</option>
+                            <option value="legal">Legal (8.5 × 14 in)</option>
+                            <option value="a3">A3 (297 × 420 mm)</option>
+                        </select>
+                        <small class="text-muted">Applied to the exported DOCX document</small>
+                    </div>
+                    <hr class="my-3">
                     <p class="text-muted mb-3">
                         Adjust page calculation parameters for more accurate page numbering.
                     </p>

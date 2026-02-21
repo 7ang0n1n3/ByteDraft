@@ -38,6 +38,17 @@ class ModernDocxExporter {
             // Get custom header and footer from localStorage
             const headerFooter = JSON.parse(localStorage.getItem('bytedraft_header_footer') || '{}');
             const projectHeaderFooter = headerFooter[project.id] || { header: '', footer: '' };
+
+            // Resolve paper size (twips: 1 inch = 1440, 1 mm ≈ 56.7)
+            const PAPER_SIZES = {
+                letter: { width: 12240, height: 15840 },  // 8.5 × 11 in
+                a4:     { width: 11906, height: 16838 },  // 210 × 297 mm
+                legal:  { width: 12240, height: 20160 },  // 8.5 × 14 in
+                a3:     { width: 16838, height: 23811 }   // 297 × 420 mm
+            };
+            const allPageSettings = JSON.parse(localStorage.getItem('bytedraft_page_settings') || '{}');
+            const projectPageSettings = allPageSettings[project.id] || {};
+            const pageSize = PAPER_SIZES[projectPageSettings.paperSize] || PAPER_SIZES.letter;
             
 
             
@@ -136,6 +147,7 @@ class ModernDocxExporter {
                     {
                         properties: {
                             page: {
+                                size: pageSize,
                                 margin: {
                                     top: 1440,    // 1 inch
                                     right: 1440,  // 1 inch
@@ -160,6 +172,7 @@ class ModernDocxExporter {
                     {
                         properties: {
                             page: {
+                                size: pageSize,
                                 margin: {
                                     top: 1440,    // 1 inch
                                     right: 1440,  // 1 inch
