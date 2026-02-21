@@ -72,6 +72,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.0
+- **Improvement**: Page Settings auto-save — all fields (paper size, chars per line, lines per page, header height, paragraph spacing) are written to localStorage the moment a value changes; settings persist across page refreshes without requiring the Save button
+
 ### v1.2.0
 - **Feature**: Paper size selector in Page Settings — choose US Letter, A4, Legal, or A3; selection is saved per-project and applied to all sections of the exported DOCX
 
@@ -430,5 +433,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.2.0
+**Version** 1.3.0
 © 2026 - Built for offline productivity
