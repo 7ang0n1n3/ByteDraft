@@ -1065,7 +1065,12 @@
                 const item = e.target.closest('.toc-item[data-path]');
                 if (item) {
                     const section = document.getElementById('section-' + item.dataset.path);
-                    if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
+                    if (section) {
+                        const topBar = document.querySelector('.top-bar');
+                        const offset = (topBar ? topBar.offsetHeight : 0) + 12;
+                        const top = section.getBoundingClientRect().top + window.scrollY - offset;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
                 }
             };
         }

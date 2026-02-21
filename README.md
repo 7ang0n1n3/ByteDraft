@@ -72,6 +72,9 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.6
+- **Fix**: TOC sidebar links now scroll so the section card clears the sticky top bar — replaced `scrollIntoView({block: 'start'})` with a manual `window.scrollTo()` that subtracts the top bar's measured height plus 12 px of breathing room
+
 ### v1.3.5
 - **Fix**: TinyMCE toolbar icons for Cite, XRef, and `{{}}` now display correctly — the previous inline SVGs used `xmlns`, `viewBox`, and `fill="currentColor"` which TinyMCE 7 ignores, producing invisible icons; replaced with locally stored SVG files (`libs/icons/`) loaded via `bytedraft-icons.js` in the correct TinyMCE 7 format (`width`/`height` only, no `xmlns`)
 
@@ -463,5 +466,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.5
+**Version** 1.3.6
 © 2026 - Built for offline productivity
