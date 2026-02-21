@@ -5,45 +5,1227 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="0.0.54">
-    <title>ByteDraft - Technical Documentation Tool</title>
-    
+    <meta name="version" content="1.0.0">
+    <title>ByteDraft — Technical Documentation</title>
+
     <!-- Bootstrap CSS -->
     <link href="libs/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="libs/css/github-dark.min.css">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="libs/fonts/css/all.min.css">
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="libs/css/styles.css">
-    <!-- JSZip for creating files -->
-    <!-- Add TinyMCE -->
+    <!-- TinyMCE -->
     <script src="libs/tinymce/tinymce.min.js"></script>
-    <!-- Templates script -->
+    <!-- Templates -->
     <script src="templates.js"></script>
-
-    <!-- Modern DOCX Library -->
+    <!-- DOCX Library -->
     <script src="libs/docx/index.umd.js"></script>
-    <!-- Modern DOCX Export Module -->
+    <!-- DOCX Export Module -->
     <script src="modernDocxExport.js"></script>
+
+    <style>
+    /* =============================================================
+       ByteDraft v2 — "Slate Pro" Design System
+       Permanent-dark sidebar · Indigo accent · Refined components
+       ============================================================= */
+
+    /* --- Google Fonts (optional preview dependency) --- */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    /* --- Design Tokens --- */
+    :root {
+        /* Sidebar — light mode */
+        --sb-bg:        #ffffff;
+        --sb-surface:   #f8fafc;
+        --sb-border:    rgba(0,0,0,0.07);
+        --sb-hover:     rgba(0,0,0,0.04);
+        --sb-active:    rgba(79,70,229,0.08);
+        --sb-text:      #64748b;
+        --sb-text-hi:   #1e293b;
+        --sb-accent:    #4f46e5;
+        --sb-width:     268px;
+        /* Sidebar item/control helpers */
+        --sb-item-bg:   rgba(0,0,0,0.025);
+        --sb-item-bdr:  rgba(0,0,0,0.07);
+        --sb-ctrl-bg:   rgba(0,0,0,0.03);
+        --sb-ctrl-bdr:  rgba(0,0,0,0.09);
+        --sb-brand-1:   #eef2ff;
+        --sb-card-text: #374151;
+        --sb-card-sub:  #9ca3af;
+
+        /* Main area — light mode defaults */
+        --bd-bg:        #f4f5f7;
+        --bd-surface:   #ffffff;
+        --bd-raised:    #f9fafb;
+        --bd-text:      #111827;
+        --bd-muted:     #6b7280;
+        --bd-border:    #e5e7eb;
+        --bd-topbar:    rgba(244,245,247,0.82);
+
+        /* Accent */
+        --accent:       #4f46e5;
+        --accent-hi:    #4338ca;
+        --accent-soft:  rgba(79,70,229,0.08);
+        --accent-ring:  rgba(79,70,229,0.25);
+        --accent-border:rgba(79,70,229,0.28);
+
+        /* Status */
+        --c-success:    #059669;
+        --c-success-bg: rgba(5,150,105,0.1);
+        --c-warning:    #d97706;
+        --c-warning-bg: rgba(217,119,6,0.1);
+        --c-danger:     #dc2626;
+        --c-danger-bg:  rgba(220,38,38,0.1);
+        --c-info:       #0891b2;
+        --c-info-bg:    rgba(8,145,178,0.1);
+
+        /* Misc */
+        --r-xs:  4px;
+        --r-sm:  7px;
+        --r-md:  11px;
+        --r-lg:  16px;
+        --r-xl:  22px;
+        --r-pill:999px;
+        --t-fast: 140ms ease;
+        --t-mid:  220ms ease;
+    }
+
+    [data-theme="dark"] {
+        /* Sidebar — dark mode */
+        --sb-bg:        #0f1117;
+        --sb-surface:   #161b27;
+        --sb-border:    rgba(255,255,255,0.06);
+        --sb-hover:     rgba(255,255,255,0.05);
+        --sb-active:    rgba(99,102,241,0.14);
+        --sb-text:      #8b95a8;
+        --sb-text-hi:   #e2e8f0;
+        --sb-accent:    #818cf8;
+        --sb-item-bg:   rgba(255,255,255,0.04);
+        --sb-item-bdr:  rgba(255,255,255,0.07);
+        --sb-ctrl-bg:   rgba(255,255,255,0.05);
+        --sb-ctrl-bdr:  rgba(255,255,255,0.09);
+        --sb-brand-1:   #1a2035;
+        --sb-card-text: #dde4f0;
+        --sb-card-sub:  #5a6478;
+
+        --bd-bg:        #0d1117;
+        --bd-surface:   #161b22;
+        --bd-raised:    #1c2230;
+        --bd-text:      #e6edf3;
+        --bd-muted:     #8b949e;
+        --bd-border:    #21262d;
+        --bd-topbar:    rgba(13,17,23,0.88);
+
+        --accent:       #6366f1;
+        --accent-hi:    #818cf8;
+        --accent-soft:  rgba(99,102,241,0.1);
+        --accent-ring:  rgba(99,102,241,0.2);
+        --accent-border:rgba(99,102,241,0.28);
+
+        --c-success:    #10b981;
+        --c-success-bg: rgba(16,185,129,0.1);
+        --c-warning:    #f59e0b;
+        --c-warning-bg: rgba(245,158,11,0.1);
+        --c-danger:     #f43f5e;
+        --c-danger-bg:  rgba(244,63,94,0.1);
+        --c-info:       #38bdf8;
+        --c-info-bg:    rgba(56,189,248,0.1);
+    }
+
+    /* ─── Reset ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+        background: var(--bd-bg) !important;
+        color: var(--bd-text) !important;
+        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        transition: background var(--t-mid), color var(--t-mid);
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bd-border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--bd-muted); }
+
+    /* ─── Sidebar ────────────────────────────────────── */
+    .sidebar {
+        background: var(--sb-bg) !important;
+        border-right: 1px solid var(--sb-border) !important;
+        width: var(--sb-width) !important;
+        height: 100vh;
+        position: fixed;
+        overflow-y: auto;
+        z-index: 1000;
+        scrollbar-width: thin;
+        scrollbar-color: var(--sb-ctrl-bdr) transparent;
+        display: flex;
+        flex-direction: column;
+        transition: width 0.28s cubic-bezier(.4,0,.2,1),
+                    background var(--t-mid),
+                    border-color var(--t-mid);
+    }
+
+    /* Collapsed state — slides away */
+    .sidebar.is-collapsed {
+        width: 0 !important;
+        overflow: hidden !important;
+        border-right: none !important;
+    }
+
+    /* Floating tab to re-open the sidebar */
+    .sidebar-expand-tab {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1050;
+        display: none;
+        width: 20px;
+        height: 52px;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 0 var(--r-sm) var(--r-sm) 0;
+        cursor: pointer;
+        font-size: 11px;
+        box-shadow: 2px 0 12px rgba(0,0,0,0.18);
+        transition: width var(--t-fast), background var(--t-fast);
+        padding: 0;
+    }
+    .sidebar-expand-tab:hover {
+        width: 28px;
+        background: var(--accent-hi);
+    }
+    .sidebar-expand-tab.visible { display: flex; }
+
+    /* Collapse button inside brand header */
+    .sidebar-collapse-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        background: var(--sb-ctrl-bg);
+        border: 1px solid var(--sb-ctrl-bdr);
+        border-radius: var(--r-sm);
+        color: var(--sb-text);
+        cursor: pointer;
+        font-size: 11px;
+        margin-left: auto;
+        flex-shrink: 0;
+        transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+        padding: 0;
+    }
+    .sidebar-collapse-btn:hover {
+        background: var(--sb-item-bg);
+        color: var(--sb-text-hi);
+        border-color: var(--sb-border);
+    }
+
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+    /* Brand strip */
+    .sidebar > .p-3.border-bottom:first-child {
+        background: linear-gradient(135deg, var(--sb-brand-1) 0%, var(--sb-bg) 100%);
+        border-bottom: 1px solid var(--sb-border) !important;
+        padding: 1.1rem 1.25rem !important;
+        flex-shrink: 0;
+        transition: background var(--t-mid);
+    }
+
+    .sidebar > .p-3.border-bottom:first-child h5 {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.4px;
+        color: var(--sb-text-hi) !important;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .sidebar > .p-3.border-bottom:first-child h5 .fa-file-alt {
+        color: var(--sb-accent) !important;
+        font-size: 14px;
+    }
+
+    /* Sidebar inner sections */
+    .sidebar > .p-3 {
+        padding: 0.9rem 1.1rem !important;
+        border-bottom: 1px solid var(--sb-border) !important;
+    }
+
+    .sidebar-section-header {
+        padding: 0 0 0.55rem 0;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .sidebar-section-header h6 {
+        font-size: 10px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.9px !important;
+        text-transform: uppercase !important;
+        color: rgba(139,149,168,0.55) !important;
+        transition: color var(--t-fast);
+    }
+
+    .sidebar-section-header:hover h6 {
+        color: rgba(139,149,168,0.85) !important;
+    }
+
+    .sidebar-chevron {
+        color: rgba(139,149,168,0.35) !important;
+        font-size: 0.6rem !important;
+        transition: transform 0.2s ease;
+    }
+
+    /* Sidebar button overrides */
+    .sidebar .btn {
+        border-radius: var(--r-sm) !important;
+        font-size: 11px !important;
+        padding: 0.2rem 0.55rem !important;
+        font-weight: 500 !important;
+    }
+
+    .sidebar .btn-outline-primary {
+        background: rgba(99,102,241,0.12) !important;
+        border: 1px solid rgba(99,102,241,0.25) !important;
+        color: var(--sb-accent) !important;
+    }
+    .sidebar .btn-outline-primary:hover {
+        background: rgba(99,102,241,0.22) !important;
+        color: #a5b4fc !important;
+    }
+
+    .sidebar .btn-outline-secondary {
+        background: var(--sb-ctrl-bg) !important;
+        border: 1px solid var(--sb-ctrl-bdr) !important;
+        color: var(--sb-text) !important;
+    }
+    .sidebar .btn-outline-secondary:hover {
+        background: var(--sb-item-bg) !important;
+        color: var(--sb-text-hi) !important;
+    }
+
+    /* Status filter select */
+    .sidebar .form-select, .sidebar .form-select-sm {
+        background: var(--sb-ctrl-bg) !important;
+        border: 1px solid var(--sb-ctrl-bdr) !important;
+        color: var(--sb-text) !important;
+        border-radius: var(--r-md) !important;
+        font-size: 12px !important;
+        padding: 0.3rem 2rem 0.3rem 0.7rem !important;
+    }
+    .sidebar .form-select:focus {
+        border-color: rgba(99,102,241,0.4) !important;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.12) !important;
+    }
+
+    /* ─── Project Cards (sidebar) ───────────────────── */
+    #projectsList .project-card {
+        background: var(--sb-item-bg) !important;
+        border: 1px solid var(--sb-item-bdr) !important;
+        border-radius: var(--r-md) !important;
+        padding: 0.6rem 0.8rem !important;
+        margin-bottom: 0.35rem !important;
+        cursor: pointer;
+        transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+    }
+    #projectsList .project-card:hover {
+        background: var(--sb-hover) !important;
+        border-color: var(--sb-border) !important;
+        transform: translateX(2px);
+    }
+    #projectsList .project-card.active {
+        background: var(--sb-active) !important;
+        border-color: rgba(99,102,241,0.3) !important;
+        border-left: 2px solid var(--sb-accent) !important;
+    }
+    #projectsList .project-card h6 {
+        font-size: 12.5px !important;
+        font-weight: 600 !important;
+        color: var(--sb-card-text) !important;
+        margin-bottom: 2px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #projectsList .project-card small,
+    #projectsList .project-card .text-muted {
+        font-size: 11px !important;
+        color: var(--sb-card-sub) !important;
+    }
+    #projectsList .project-actions {
+        margin-top: 0.35rem !important;
+        gap: 0.2rem !important;
+        flex-wrap: wrap;
+    }
+    #projectsList .btn-delete {
+        background: rgba(244,63,94,0.12) !important;
+        color: #f87171 !important;
+        border: 1px solid rgba(244,63,94,0.2) !important;
+        border-radius: var(--r-xs) !important;
+        font-size: 10.5px !important;
+        padding: 0.15rem 0.5rem !important;
+    }
+    #projectsList .btn-delete:hover {
+        background: rgba(244,63,94,0.22) !important;
+        color: #fca5a5 !important;
+    }
+    #projectsList .btn {
+        font-size: 10.5px !important;
+        padding: 0.15rem 0.5rem !important;
+        border-radius: var(--r-xs) !important;
+    }
+    .status-selector {
+        font-size: 10.5px !important;
+        padding: 0.12rem 0.45rem !important;
+        background: var(--sb-ctrl-bg) !important;
+        border: 1px solid var(--sb-ctrl-bdr) !important;
+        color: var(--sb-text) !important;
+        border-radius: var(--r-xs) !important;
+    }
+
+    /* ─── Status Badges ──────────────────────────────── */
+    .status-badge {
+        font-size: 10px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px !important;
+        padding: 0.18rem 0.55rem !important;
+        border-radius: var(--r-pill) !important;
+        display: inline-block;
+    }
+    .status-draft    { background: rgba(245,158,11,0.15) !important; color: #fbbf24 !important; }
+    .status-working  { background: rgba(99,102,241,0.15) !important; color: #a5b4fc !important; }
+    .status-publish  { background: rgba(16,185,129,0.15) !important; color: #34d399 !important; }
+
+    /* ─── TOC ────────────────────────────────────────── */
+    .toc-preview {
+        max-height: 240px;
+        overflow-y: auto;
+        font-family: 'JetBrains Mono', "Cascadia Code", "Fira Code", "Consolas", monospace !important;
+        font-size: 10.5px !important;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.07) transparent;
+    }
+    .toc-item {
+        padding: 2px 0 !important;
+        border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+        color: var(--sb-text) !important;
+        transition: color var(--t-fast), background var(--t-fast);
+        cursor: pointer;
+    }
+    .toc-item:hover {
+        color: var(--sb-text-hi) !important;
+        background: rgba(255,255,255,0.04) !important;
+    }
+    .toc-item.level-1 { color: #a5b4fc !important; font-weight: 600 !important; }
+    .toc-item.level-2 { color: #8891a8 !important; }
+    .toc-item.level-3 { color: #5a6478 !important; }
+    #wordCountSummary { color: rgba(139,149,168,0.45) !important; font-size: 10px !important; }
+
+    /* ─── Template Cards (sidebar) ──────────────────── */
+    #templatesList .template-card {
+        background: var(--sb-item-bg) !important;
+        border: 1px solid var(--sb-item-bdr) !important;
+        border-radius: var(--r-md) !important;
+        padding: 0.55rem 0.75rem !important;
+        margin-bottom: 0.3rem !important;
+        cursor: pointer;
+        transition: all var(--t-fast);
+    }
+    #templatesList .template-card:hover {
+        background: rgba(99,102,241,0.1) !important;
+        border-color: rgba(99,102,241,0.22) !important;
+    }
+    #templatesList .template-card h6 {
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        color: var(--sb-card-text) !important;
+        margin-bottom: 2px !important;
+    }
+    #templatesList .template-card small,
+    #templatesList .template-card .text-muted { font-size: 10.5px !important; color: var(--sb-card-sub) !important; }
+
+    /* ─── Custom Fields (sidebar) ───────────────────── */
+    #customFieldsList .field-item {
+        background: var(--sb-item-bg) !important;
+        border: 1px solid var(--sb-item-bdr) !important;
+        border-radius: var(--r-sm) !important;
+        padding: 0.38rem 0.6rem !important;
+        margin-bottom: 0.28rem !important;
+        font-size: 11.5px !important;
+        color: var(--sb-text) !important;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .sidebar .btn-outline-secondary.w-100 {
+        width: 100% !important;
+        font-size: 11.5px !important;
+        color: var(--sb-card-sub) !important;
+        border: 1px dashed var(--sb-ctrl-bdr) !important;
+        background: transparent !important;
+        border-radius: var(--r-md) !important;
+        padding: 0.42rem !important;
+        transition: all var(--t-fast);
+        margin-top: 0.4rem;
+    }
+    .sidebar .btn-outline-secondary.w-100:hover {
+        background: var(--sb-ctrl-bg) !important;
+        color: var(--sb-text) !important;
+        border-color: var(--sb-border) !important;
+    }
+
+    /* ─── Main Content ───────────────────────────────── */
+    .main-content {
+        margin-left: var(--sb-width) !important;
+        min-height: 100vh;
+        background: var(--bd-bg) !important;
+        transition: margin-left 0.28s cubic-bezier(.4,0,.2,1),
+                    background var(--t-mid);
+    }
+    .main-content.sidebar-collapsed {
+        margin-left: 0 !important;
+    }
+
+    /* ─── Top Bar ────────────────────────────────────── */
+    .top-bar {
+        background: var(--bd-topbar) !important;
+        backdrop-filter: blur(16px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+        border-bottom: 1px solid var(--bd-border) !important;
+        padding: 0.7rem 1.75rem !important;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        transition: background var(--t-mid), border-color var(--t-mid);
+    }
+
+    .top-bar h4 {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        color: var(--bd-text) !important;
+        letter-spacing: -0.3px !important;
+    }
+
+    /* Top bar buttons — pill style */
+    .top-bar .btn {
+        border-radius: var(--r-pill) !important;
+        font-size: 12.5px !important;
+        font-weight: 500 !important;
+        padding: 0.38rem 1rem !important;
+        transition: all var(--t-fast) !important;
+        white-space: nowrap;
+    }
+    .top-bar .btn-outline-secondary {
+        background: transparent !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-muted) !important;
+    }
+    .top-bar .btn-outline-secondary:hover {
+        background: var(--bd-surface) !important;
+        color: var(--bd-text) !important;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.07) !important;
+    }
+    .top-bar .btn-outline-primary {
+        background: var(--accent-soft) !important;
+        border: 1px solid var(--accent-border) !important;
+        color: var(--accent) !important;
+    }
+    .top-bar .btn-outline-primary:hover {
+        background: var(--accent) !important;
+        color: #fff !important;
+        border-color: var(--accent) !important;
+    }
+    .top-bar .btn-outline-info {
+        background: transparent !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-muted) !important;
+    }
+    .top-bar .btn-outline-info:hover {
+        background: var(--c-info-bg) !important;
+        color: var(--c-info) !important;
+        border-color: rgba(8,145,178,0.3) !important;
+    }
+    .top-bar .btn-outline-warning {
+        background: transparent !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-muted) !important;
+    }
+    .top-bar .btn-outline-warning:hover {
+        background: var(--c-warning-bg) !important;
+        color: var(--c-warning) !important;
+        border-color: rgba(217,119,6,0.3) !important;
+    }
+    .top-bar .btn-success,
+    .top-bar .dropdown > .btn-success {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        border: none !important;
+        color: #fff !important;
+        box-shadow: 0 2px 10px rgba(5,150,105,0.28) !important;
+    }
+    .top-bar .btn-success:hover {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+        box-shadow: 0 4px 16px rgba(5,150,105,0.38) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Theme toggle */
+    #themeToggle {
+        width: 36px !important;
+        height: 36px !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: var(--r-pill) !important;
+        background: var(--bd-surface) !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-muted) !important;
+    }
+    #themeToggle:hover {
+        color: var(--accent) !important;
+        border-color: var(--accent-border) !important;
+        background: var(--accent-soft) !important;
+        transform: rotate(18deg);
+    }
+
+    /* Dropdown */
+    .top-bar .dropdown-menu {
+        border: 1px solid var(--bd-border) !important;
+        border-radius: var(--r-lg) !important;
+        box-shadow: 0 10px 32px rgba(0,0,0,0.12) !important;
+        background: var(--bd-surface) !important;
+        padding: 0.4rem !important;
+        min-width: 165px !important;
+    }
+    .top-bar .dropdown-item {
+        border-radius: var(--r-sm) !important;
+        font-size: 13px !important;
+        padding: 0.48rem 0.75rem !important;
+        color: var(--bd-text) !important;
+        transition: all var(--t-fast) !important;
+    }
+    .top-bar .dropdown-item:hover {
+        background: var(--accent-soft) !important;
+        color: var(--accent) !important;
+    }
+
+    /* ─── Content Area ───────────────────────────────── */
+    .p-4 {
+        padding: 1.5rem 2rem !important;
+        background: var(--bd-bg) !important;
+        min-height: calc(100vh - 57px);
+        transition: background var(--t-mid);
+    }
+
+    /* Empty state */
+    #contentArea > .text-center.py-5 {
+        padding: 6rem 2rem !important;
+    }
+    #contentArea > .text-center.py-5 .fa-file-alt {
+        color: rgba(99,102,241,0.18) !important;
+        font-size: 3.5rem !important;
+        display: block;
+        margin-bottom: 1.25rem !important;
+        filter: drop-shadow(0 0 24px rgba(99,102,241,0.15));
+        animation: pulse-icon 3s ease-in-out infinite;
+    }
+    @keyframes pulse-icon {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50%       { opacity: 0.7; transform: scale(1.06); }
+    }
+    #contentArea > .text-center.py-5 h5 {
+        color: var(--bd-text) !important;
+        font-size: 17px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.3px !important;
+        margin-bottom: 0.5rem !important;
+    }
+    #contentArea > .text-center.py-5 p {
+        color: var(--bd-muted) !important;
+        font-size: 13.5px !important;
+    }
+
+    /* ─── Section Items ──────────────────────────────── */
+    .section-item {
+        background: var(--bd-surface) !important;
+        border: 1px solid var(--bd-border) !important;
+        border-radius: var(--r-xl) !important;
+        margin-bottom: 1rem !important;
+        overflow: hidden;
+        transition: box-shadow var(--t-fast), border-color var(--t-fast);
+        animation: slide-up 0.22s ease backwards;
+    }
+    @keyframes slide-up {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: none; }
+    }
+    .section-item:hover {
+        border-color: var(--accent-border) !important;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.07) !important;
+    }
+    .section-item.section-locked {
+        border-left: 3px solid var(--c-warning) !important;
+    }
+    .section-header {
+        background: var(--bd-raised) !important;
+        border-bottom: 1px solid var(--bd-border) !important;
+        padding: 0.85rem 1.25rem !important;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .section-content {
+        padding: 1.25rem !important;
+    }
+    .subsection-item {
+        background: var(--bd-raised) !important;
+        border: 1px solid var(--bd-border) !important;
+        border-radius: var(--r-lg) !important;
+        overflow: hidden;
+    }
+    .subsection-item.section-locked {
+        border-left: 3px solid var(--c-warning) !important;
+    }
+
+    /* ─── Global Buttons ─────────────────────────────── */
+    .btn-primary {
+        background: var(--accent) !important;
+        border-color: var(--accent) !important;
+        color: #fff !important;
+        border-radius: var(--r-sm) !important;
+        font-weight: 500 !important;
+    }
+    .btn-primary:hover {
+        background: var(--accent-hi) !important;
+        border-color: var(--accent-hi) !important;
+    }
+    .btn-secondary {
+        background: var(--bd-surface) !important;
+        border-color: var(--bd-border) !important;
+        color: var(--bd-text) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-secondary:hover { background: var(--bd-raised) !important; }
+
+    .btn-success {
+        background: var(--c-success) !important;
+        border-color: var(--c-success) !important;
+        color: #fff !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-primary {
+        background: var(--accent-soft) !important;
+        border: 1px solid var(--accent-border) !important;
+        color: var(--accent) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-primary:hover { background: var(--accent) !important; color: #fff !important; }
+    .btn-outline-secondary {
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-muted) !important;
+        background: transparent !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-secondary:hover { background: var(--bd-raised) !important; color: var(--bd-text) !important; }
+    .btn-outline-danger {
+        border-color: rgba(220,38,38,0.28) !important;
+        color: var(--c-danger) !important;
+        background: var(--c-danger-bg) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-danger:hover { background: var(--c-danger) !important; color: #fff !important; }
+    .btn-outline-warning {
+        border-color: rgba(217,119,6,0.28) !important;
+        color: var(--c-warning) !important;
+        background: var(--c-warning-bg) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-warning:hover { background: var(--c-warning) !important; color: #fff !important; }
+    .btn-outline-success {
+        border-color: rgba(5,150,105,0.28) !important;
+        color: var(--c-success) !important;
+        background: var(--c-success-bg) !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-outline-success:hover { background: var(--c-success) !important; color: #fff !important; }
+    .btn-outline-info {
+        border-color: rgba(8,145,178,0.28) !important;
+        color: var(--c-info) !important;
+        background: var(--c-info-bg) !important;
+        border-radius: var(--r-sm) !important;
+    }
+
+    .btn-icon {
+        padding: 0.28rem 0.55rem !important;
+        font-size: 12px !important;
+        border-radius: var(--r-sm) !important;
+    }
+    .btn-delete {
+        background: var(--c-danger-bg) !important;
+        color: var(--c-danger) !important;
+        border: 1px solid rgba(220,38,38,0.2) !important;
+        border-radius: var(--r-xs) !important;
+        padding: 0.18rem 0.5rem !important;
+        font-size: 11px !important;
+        cursor: pointer;
+    }
+    .btn-delete:hover { background: var(--c-danger) !important; color: #fff !important; }
+
+    /* ─── Forms ──────────────────────────────────────── */
+    .form-control {
+        background: var(--bd-bg) !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-text) !important;
+        border-radius: var(--r-md) !important;
+        font-size: 13.5px !important;
+        transition: border-color var(--t-fast), box-shadow var(--t-fast) !important;
+        padding: 0.48rem 0.85rem !important;
+    }
+    .form-control:focus {
+        background: var(--bd-bg) !important;
+        border-color: var(--accent) !important;
+        color: var(--bd-text) !important;
+        box-shadow: 0 0 0 3px var(--accent-ring) !important;
+        outline: none !important;
+    }
+    .form-select {
+        background-color: var(--bd-bg) !important;
+        border: 1px solid var(--bd-border) !important;
+        color: var(--bd-text) !important;
+        border-radius: var(--r-md) !important;
+        font-size: 13.5px !important;
+    }
+    .form-select:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 3px var(--accent-ring) !important;
+    }
+    .form-label {
+        font-size: 11.5px !important;
+        font-weight: 600 !important;
+        color: var(--bd-muted) !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+        margin-bottom: 0.38rem !important;
+        display: block;
+    }
+    .form-check-input:checked {
+        background-color: var(--accent) !important;
+        border-color: var(--accent) !important;
+    }
+    ::placeholder { color: var(--bd-muted) !important; opacity: 0.55 !important; }
+
+    /* ─── Modals ─────────────────────────────────────── */
+    .modal-content {
+        background: var(--bd-surface) !important;
+        border: 1px solid var(--bd-border) !important;
+        border-radius: var(--r-xl) !important;
+        box-shadow: 0 28px 72px rgba(0,0,0,0.18) !important;
+        overflow: hidden;
+    }
+    .modal-header {
+        background: var(--bd-surface) !important;
+        border-bottom: 1px solid var(--bd-border) !important;
+        padding: 1.2rem 1.5rem !important;
+    }
+    .modal-title {
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        color: var(--bd-text) !important;
+        letter-spacing: -0.25px !important;
+    }
+    .modal-body {
+        padding: 1.5rem !important;
+        background: var(--bd-surface) !important;
+        color: var(--bd-text) !important;
+    }
+    .modal-footer {
+        background: var(--bd-surface) !important;
+        border-top: 1px solid var(--bd-border) !important;
+        padding: 1rem 1.5rem !important;
+        gap: 0.5rem;
+    }
+    .btn-close { opacity: 0.45; transition: opacity var(--t-fast), transform var(--t-fast); }
+    .btn-close:hover { opacity: 0.9; transform: rotate(90deg); }
+    [data-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%) !important;
+    }
+    .modal.show .modal-dialog {
+        animation: slide-up 0.2s ease;
+    }
+
+    /* ─── Tables ─────────────────────────────────────── */
+    .table {
+        color: var(--bd-text) !important;
+        border-color: var(--bd-border) !important;
+        margin-bottom: 0;
+    }
+    .table th {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.6px !important;
+        color: var(--bd-muted) !important;
+        border-color: var(--bd-border) !important;
+        background: var(--bd-raised) !important;
+        padding: 0.65rem 0.9rem !important;
+    }
+    .table td {
+        font-size: 13px !important;
+        border-color: var(--bd-border) !important;
+        color: var(--bd-text) !important;
+        padding: 0.58rem 0.9rem !important;
+        background: var(--bd-surface) !important;
+    }
+    .table-dark thead th,
+    .table thead.table-dark th {
+        background: #1e293b !important;
+        color: #94a3b8 !important;
+        border-color: rgba(255,255,255,0.08) !important;
+    }
+    .table-primary thead tr th,
+    .table thead.table-primary th,
+    .table-primary th {
+        background: var(--accent) !important;
+        color: #fff !important;
+        border-color: rgba(255,255,255,0.12) !important;
+    }
+    .table-bordered, .table-bordered th, .table-bordered td {
+        border-color: var(--bd-border) !important;
+    }
+    .table tbody tr:hover td {
+        background: var(--accent-soft) !important;
+    }
+
+    /* ─── Alerts ─────────────────────────────────────── */
+    .alert {
+        border-radius: var(--r-md) !important;
+        font-size: 13px !important;
+        border-width: 1px !important;
+    }
+    .alert-info {
+        background: var(--c-info-bg) !important;
+        border-color: rgba(8,145,178,0.2) !important;
+        color: var(--bd-text) !important;
+    }
+    .alert-success {
+        background: var(--c-success-bg) !important;
+        border-color: rgba(5,150,105,0.2) !important;
+        color: var(--bd-text) !important;
+    }
+    .alert-warning {
+        background: var(--c-warning-bg) !important;
+        border-color: rgba(217,119,6,0.2) !important;
+        color: var(--bd-text) !important;
+    }
+    .alert-danger {
+        background: var(--c-danger-bg) !important;
+        border-color: rgba(220,38,38,0.2) !important;
+        color: var(--bd-text) !important;
+    }
+
+    /* Toast notifications */
+    body > .alert.position-fixed {
+        border-radius: var(--r-pill) !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        padding: 0.6rem 1.5rem !important;
+        box-shadow: 0 10px 32px rgba(0,0,0,0.18) !important;
+        border: none !important;
+        min-width: 260px !important;
+    }
+
+    /* ─── Version History ────────────────────────────── */
+    .version-history {
+        max-height: 300px;
+        overflow-y: auto;
+        border-radius: var(--r-md);
+        border: 1px solid var(--bd-border);
+        overflow: hidden;
+    }
+    .version-item {
+        padding: 0.65rem 1rem !important;
+        border-bottom: 1px solid var(--bd-border) !important;
+        transition: background var(--t-fast);
+        cursor: pointer;
+        font-size: 13px !important;
+    }
+    .version-item:last-child { border-bottom: none !important; }
+    .version-item:hover { background: var(--accent-soft) !important; }
+    .version-item.active {
+        background: var(--accent-soft) !important;
+        border-left: 3px solid var(--accent) !important;
+    }
+
+    /* ─── Drag & Drop ────────────────────────────────── */
+    .drag-handle {
+        cursor: grab;
+        color: var(--bd-border) !important;
+        transition: color var(--t-fast);
+    }
+    .drag-handle:hover { color: var(--accent) !important; }
+    .drag-handle:active { cursor: grabbing; }
+
+    .section-item.dragging, .subsection-item.dragging {
+        opacity: 0.5;
+        transform: rotate(1.5deg);
+        box-shadow: 0 10px 32px rgba(0,0,0,0.18);
+        z-index: 1000;
+        position: relative;
+    }
+    .section-item.drag-over, .subsection-item.drag-over {
+        border: 3px dashed var(--accent) !important;
+        background: var(--accent-soft) !important;
+        border-radius: var(--r-xl) !important;
+        box-shadow: 0 0 12px var(--accent-ring);
+    }
+    .section-item.drop-as-child, .subsection-item.drop-as-child {
+        border: 6px dashed #3b82f6 !important;
+        background: rgba(59,130,246,0.12) !important;
+        box-shadow: 0 0 20px rgba(59,130,246,0.35), inset 0 0 16px rgba(59,130,246,0.1);
+    }
+    .section-item.drop-as-section, .subsection-item.drop-as-section {
+        border: 6px dashed #f43f5e !important;
+        background: rgba(244,63,94,0.12) !important;
+        box-shadow: 0 0 20px rgba(244,63,94,0.35), inset 0 0 16px rgba(244,63,94,0.1);
+    }
+    .section-item[draggable="true"]:hover, .subsection-item[draggable="true"]:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ─── Code Blocks ────────────────────────────────── */
+    .code-block {
+        background: #0d1117 !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
+        color: #c9d1d9 !important;
+        border-radius: var(--r-md) !important;
+        font-family: 'JetBrains Mono', "Cascadia Code", "Consolas", monospace !important;
+        font-size: 12.5px !important;
+        padding: 1rem 1.25rem !important;
+        overflow-x: auto;
+    }
+
+    /* ─── Section actions ───────────────────────────── */
+    .section-actions { display: flex; gap: 0.25rem; }
+    .project-actions { display: flex; gap: 0.25rem; margin-top: 0.5rem; }
+    .export-options  { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    /* ─── Custom fields main area ───────────────────── */
+    .custom-fields-panel {
+        background: var(--bd-surface) !important;
+        border: 1px solid var(--bd-border) !important;
+        border-radius: var(--r-lg) !important;
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    .field-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* ─── Comments ───────────────────────────────────── */
+    .comment-resolved { opacity: 0.5; }
+
+    /* ─── Badge ──────────────────────────────────────── */
+    .badge.bg-secondary {
+        background: rgba(139,149,168,0.15) !important;
+        color: var(--bd-muted) !important;
+    }
+
+    /* ─── TinyMCE Dark Theme Integration ─────────────── */
+    [data-theme="dark"] .tox-tinymce {
+        background-color: #161b22 !important;
+        border-color: #21262d !important;
+    }
+    [data-theme="dark"] .tox .tox-toolbar,
+    [data-theme="dark"] .tox .tox-toolbar__group {
+        background-color: #1c2230 !important;
+        border-bottom: 1px solid #21262d !important;
+    }
+    [data-theme="dark"] .tox .tox-edit-area,
+    [data-theme="dark"] .tox .tox-edit-area__iframe {
+        background-color: #161b22 !important;
+    }
+    [data-theme="dark"] .tox .tox-tbtn { color: #e6edf3 !important; }
+    [data-theme="dark"] .tox .tox-tbtn:hover { background-color: #21262d !important; }
+    [data-theme="dark"] .tox .tox-statusbar {
+        background-color: #1c2230 !important;
+        color: #8b949e !important;
+        border-top: 1px solid #21262d !important;
+    }
+    [data-theme="dark"] .tox .tox-statusbar__path,
+    [data-theme="dark"] .tox .tox-statusbar__wordcount { color: #8b949e !important; }
+    [data-theme="dark"] .tox .tox-menu {
+        background-color: #1c2230 !important;
+        border: 1px solid #21262d !important;
+    }
+    [data-theme="dark"] .tox .tox-collection__item { color: #e6edf3 !important; }
+    [data-theme="dark"] .tox .tox-collection__item:hover { background-color: #21262d !important; }
+
+    /* ─── TinyMCE Fullscreen fix ─────────────────────── */
+    body.tox-fullscreen {
+        overflow: hidden;
+    }
+    /* Only the editor that's actually fullscreen gets promoted.
+       TinyMCE adds .tox-fullscreen to that specific .tox-tinymce container. */
+    body.tox-fullscreen .tox-tinymce.tox-fullscreen {
+        z-index: 9900 !important;
+        border-radius: 0 !important;
+        visibility: visible !important;
+    }
+    /* Hide every OTHER editor so they don't bleed through */
+    body.tox-fullscreen .tox-tinymce:not(.tox-fullscreen) {
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+    /* Neutralise any transforms on section containers while fullscreen is active */
+    body.tox-fullscreen .section-item,
+    body.tox-fullscreen .subsection-item {
+        transform: none !important;
+        animation: none !important;
+        overflow: visible !important;
+    }
+
+    /* ─── Dark Mode: Content area ────────────────────── */
+    [data-theme="dark"] .p-4,
+    [data-theme="dark"] .main-content { background: #0d1117 !important; }
+    [data-theme="dark"] .section-item { background: #161b22 !important; border-color: #21262d !important; }
+    [data-theme="dark"] .section-header { background: #1c2230 !important; border-color: #21262d !important; }
+    [data-theme="dark"] .section-content { background: #161b22 !important; }
+    [data-theme="dark"] .subsection-item { background: #1c2230 !important; border-color: #21262d !important; }
+    [data-theme="dark"] .modal-content { box-shadow: 0 28px 72px rgba(0,0,0,0.5) !important; }
+
+    /* ─── Dark Mode: Form elements ───────────────────── */
+    [data-theme="dark"] .form-control { background: #0d1117 !important; border-color: #21262d !important; }
+    [data-theme="dark"] .form-select  { background-color: #0d1117 !important; border-color: #21262d !important; }
+    [data-theme="dark"] .form-control:focus, [data-theme="dark"] .form-select:focus {
+        background: #0d1117 !important;
+        border-color: var(--accent) !important;
+    }
+
+    /* ─── Dark Mode: Tables ──────────────────────────── */
+    [data-theme="dark"] .table td { background: #161b22 !important; }
+    [data-theme="dark"] .table th  { background: #0d1117 !important; }
+    [data-theme="dark"] .table tbody tr:hover td { background: rgba(99,102,241,0.08) !important; }
+    [data-theme="dark"] .table-bordered, [data-theme="dark"] .table-bordered th, [data-theme="dark"] .table-bordered td {
+        border-color: #21262d !important;
+    }
+    [data-theme="dark"] .table-primary th,
+    [data-theme="dark"] thead.table-primary th {
+        background: #312e81 !important;
+        color: #e0e7ff !important;
+    }
+
+    /* ─── Dark Mode: Misc ────────────────────────────── */
+    [data-theme="dark"] .top-bar .dropdown-menu {
+        background: #1c2230 !important;
+        border-color: #21262d !important;
+    }
+    [data-theme="dark"] .top-bar .dropdown-item { color: #c9d1d9 !important; }
+    [data-theme="dark"] .top-bar .dropdown-item:hover {
+        background: rgba(99,102,241,0.1) !important;
+        color: #a5b4fc !important;
+    }
+    [data-theme="dark"] .section-item.drag-over,
+    [data-theme="dark"] .subsection-item.drag-over {
+        background: rgba(99,102,241,0.15) !important;
+        border-color: var(--accent) !important;
+    }
+    [data-theme="dark"] .section-item.drop-as-child,
+    [data-theme="dark"] .subsection-item.drop-as-child {
+        background-color: rgba(59,130,246,0.18) !important;
+        border-color: #60a5fa !important;
+        border-width: 6px !important;
+    }
+    [data-theme="dark"] .section-item.drop-as-section,
+    [data-theme="dark"] .subsection-item.drop-as-section {
+        background-color: rgba(244,63,94,0.18) !important;
+        border-color: #fb7185 !important;
+        border-width: 6px !important;
+    }
+
+    /* ─── Dark Mode: Comments ────────────────────────── */
+    [data-theme="dark"] #commentsModal .card {
+        background-color: #1c2230 !important;
+        border-color: #21262d !important;
+        color: #e6edf3 !important;
+    }
+    [data-theme="dark"] #commentsModal .card p { color: #e6edf3 !important; }
+    [data-theme="dark"] #commentsModal .card small { color: #8b949e !important; }
+
+    /* ─── Font Awesome Fix ───────────────────────────── */
+    .fas, .far, .fab {
+        font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 6 Brands", "Font Awesome 5 Brands" !important;
+        font-style: normal !important; font-variant: normal !important;
+        text-rendering: auto !important;
+        -webkit-font-smoothing: antialiased !important;
+        -moz-osx-font-smoothing: grayscale !important;
+        display: inline-block !important;
+    }
+    .fas { font-weight: 900 !important; }
+    .far, .fab { font-weight: 400 !important; }
+
+    /* ─── Responsive ─────────────────────────────────── */
+    @media (max-width: 768px) {
+        .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+        .sidebar.show { transform: translateX(0); }
+        .main-content { margin-left: 0 !important; }
+        .top-bar { padding: 0.65rem 1rem !important; }
+        .p-4 { padding: 1rem !important; }
+    }
+
+    /* ─── Tiny animation helpers ─────────────────────── */
+    .theme-toggle-animation { transition: transform 0.3s ease; }
+    .theme-toggle-animation:hover { transform: rotate(180deg); }
+
+    </style>
 </head>
 <body>
-    <!-- Sidebar -->
+
+    <!-- ══════════════════════════════════════════════════
+         SIDEBAR
+    ═══════════════════════════════════════════════════ -->
     <div class="sidebar" id="sidebar">
-        <div class="p-3 border-bottom">
-            <h5 class="mb-0">
+
+        <!-- Brand -->
+        <div class="p-3 border-bottom" style="display:flex;align-items:center;justify-content:space-between;">
+            <h5 class="mb-0" style="flex:1;">
                 <i class="fas fa-file-alt text-primary me-2"></i>
                 ByteDraft
             </h5>
+            <button class="sidebar-collapse-btn" id="sidebarCollapseBtn"
+                    onclick="collapseSidebar()" title="Collapse sidebar">
+                <i class="fas fa-chevron-left"></i>
+            </button>
         </div>
-        
-        <!-- Projects Section -->
+
+        <!-- Projects -->
         <div class="p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header" onclick="toggleSidebarSection('projects')">
+            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header"
+                 onclick="toggleSidebarSection('projects')">
                 <h6 class="mb-0">Projects</h6>
                 <div class="d-flex align-items-center gap-1">
                     <i class="fas fa-chevron-down sidebar-chevron" id="chevron-projects"></i>
-                    <button class="btn btn-sm btn-outline-primary" onclick="showNewProjectModal(); event.stopPropagation();">
+                    <button class="btn btn-sm btn-outline-primary"
+                            onclick="showNewProjectModal(); event.stopPropagation();">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
@@ -60,20 +1242,25 @@
                 <div id="projectsList"></div>
             </div>
         </div>
-        <!-- Table of Contents Preview -->
+
+        <!-- Table of Contents -->
         <div class="p-3">
-            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header" onclick="toggleSidebarSection('toc')">
+            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header"
+                 onclick="toggleSidebarSection('toc')">
                 <h6 class="mb-0">Table of Contents</h6>
                 <div class="d-flex align-items-center gap-1">
                     <i class="fas fa-chevron-down sidebar-chevron" id="chevron-toc"></i>
                     <div class="d-flex gap-1" onclick="event.stopPropagation()">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="showPageSettings()" title="Page Settings">
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="showPageSettings()" title="Page Settings">
                             <i class="fas fa-cog"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="showHeaderFooterModal()" title="Edit Header/Footer">
+                        <button class="btn btn-sm btn-outline-secondary"
+                                onclick="showHeaderFooterModal()" title="Edit Header/Footer">
                             <i class="fas fa-heading"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="updateTOCPreview()" title="Refresh TOC">
+                        <button class="btn btn-sm btn-outline-primary"
+                                onclick="updateTOCPreview()" title="Refresh TOC">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
@@ -86,9 +1273,11 @@
                 <div id="wordCountSummary" class="mt-2 text-muted" style="font-size:0.75em;"></div>
             </div>
         </div>
-        <!-- Templates Section -->
+
+        <!-- Templates -->
         <div class="p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header" onclick="toggleSidebarSection('templates')">
+            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header"
+                 onclick="toggleSidebarSection('templates')">
                 <h6 class="mb-0">Templates</h6>
                 <i class="fas fa-chevron-down sidebar-chevron" id="chevron-templates"></i>
             </div>
@@ -99,32 +1288,48 @@
 
         <!-- Custom Fields -->
         <div class="p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header" onclick="toggleSidebarSection('fields')">
+            <div class="d-flex justify-content-between align-items-center mb-2 sidebar-section-header"
+                 onclick="toggleSidebarSection('fields')">
                 <h6 class="mb-0">Custom Fields</h6>
                 <i class="fas fa-chevron-down sidebar-chevron" id="chevron-fields"></i>
             </div>
             <div id="sidebar-fields-body">
                 <div id="customFieldsList"></div>
-                <button class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="showNewFieldModal()">
+                <button class="btn btn-sm btn-outline-secondary w-100 mt-2"
+                        onclick="showNewFieldModal()">
                     <i class="fas fa-plus me-1"></i>Add Field
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Main Content -->
+    </div><!-- /sidebar -->
+
+    <!-- Sidebar expand tab (visible only when sidebar is collapsed) -->
+    <button class="sidebar-expand-tab" id="sidebarExpandTab"
+            onclick="collapseSidebar()" title="Expand sidebar">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+
+
+    <!-- ══════════════════════════════════════════════════
+         MAIN CONTENT
+    ═══════════════════════════════════════════════════ -->
     <div class="main-content">
+
         <!-- Top Bar -->
         <div class="top-bar">
             <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <button class="btn btn-outline-secondary d-md-none me-2" onclick="toggleSidebar()">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-secondary d-md-none"
+                            onclick="toggleSidebar()">
                         <i class="fas fa-bars"></i>
                     </button>
                     <h4 class="mb-0" id="currentProjectTitle">Select a Project</h4>
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary" onclick="showFindReplaceModal()" title="Find & Replace across all sections">
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <button class="btn btn-outline-secondary"
+                            onclick="showFindReplaceModal()"
+                            title="Find &amp; Replace across all sections">
                         <i class="fas fa-search me-1"></i>Find &amp; Replace
                     </button>
                     <button class="btn btn-outline-secondary" onclick="showVersionHistory()">
@@ -134,23 +1339,28 @@
                         <i class="fas fa-upload me-1"></i>Import
                     </button>
                     <button class="btn btn-outline-info" onclick="showDocumentInfoModal()">
-                        <i class="fas fa-table me-1"></i>Edit Document Info
+                        <i class="fas fa-table me-1"></i>Doc&nbsp;Info
                     </button>
                     <button class="btn btn-outline-warning" onclick="showCustomChangelogModal()">
-                        <i class="fas fa-edit me-1"></i>Document Change Log
+                        <i class="fas fa-edit me-1"></i>Changelog
                     </button>
                     <div class="dropdown">
-                        <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <button class="btn btn-success dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown">
                             <i class="fas fa-download me-1"></i>Export
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="exportDocument('docx')" title="Export as .docx file (Modern Word format)">
-                                <i class="fas fa-file-word me-2"></i>Word (.docx)
-                            </a></li>
-                            
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#"
+                                   onclick="exportDocument('docx')"
+                                   title="Export as .docx file">
+                                    <i class="fas fa-file-word me-2"></i>Word (.docx)
+                                </a>
+                            </li>
                         </ul>
                     </div>
-                    <button class="btn btn-outline-secondary theme-toggle-animation" id="themeToggle" title="Toggle Dark/Light Mode">
+                    <button class="btn btn-outline-secondary theme-toggle-animation"
+                            id="themeToggle" title="Toggle Dark/Light Mode">
                         <i class="fas fa-moon"></i>
                     </button>
                 </div>
@@ -167,10 +1377,16 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Hidden file input for JSON import -->
-    <input type="file" id="jsonImportInput" accept=".json" style="display: none;" onchange="handleJSONImport(event)">
+    </div><!-- /main-content -->
+
+
+    <!-- ══════════════════════════════════════════════════
+         HIDDEN INPUTS & MODALS
+    ═══════════════════════════════════════════════════ -->
+
+    <input type="file" id="jsonImportInput" accept=".json"
+           style="display:none;" onchange="handleJSONImport(event)">
 
     <!-- New Project Modal -->
     <div class="modal fade" id="newProjectModal" tabindex="-1">
@@ -183,11 +1399,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Project Name</label>
-                        <input type="text" class="form-control" id="newProjectName" placeholder="Enter project name">
+                        <input type="text" class="form-control" id="newProjectName"
+                               placeholder="Enter project name">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Description</label>
-                        <textarea class="form-control" id="newProjectDesc" rows="3" placeholder="Project description"></textarea>
+                        <textarea class="form-control" id="newProjectDesc" rows="3"
+                                  placeholder="Project description"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Template</label>
@@ -202,8 +1420,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="createProject()">Create Project</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="createProject()">Create Project</button>
                 </div>
             </div>
         </div>
@@ -220,11 +1440,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Field Name</label>
-                        <input type="text" class="form-control" id="newFieldName" placeholder="e.g., Client Name">
+                        <input type="text" class="form-control" id="newFieldName"
+                               placeholder="e.g., Client Name">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Default Value</label>
-                        <input type="text" class="form-control" id="newFieldValue" placeholder="Default value">
+                        <input type="text" class="form-control" id="newFieldValue"
+                               placeholder="Default value">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Field Type</label>
@@ -237,8 +1459,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="addCustomField()">Add Field</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="addCustomField()">Add Field</button>
                 </div>
             </div>
         </div>
@@ -253,9 +1477,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="version-history" id="versionHistoryList">
-                        <!-- Version history items will be populated here -->
-                    </div>
+                    <div class="version-history" id="versionHistoryList"></div>
                 </div>
             </div>
         </div>
@@ -280,19 +1502,22 @@
                                     <th>Reviewer</th>
                                     <th>Approver</th>
                                     <th>Description</th>
-                                    <th style="width: 40px;"></th>
+                                    <th style="width:40px;"></th>
                                 </tr>
                             </thead>
-                            <tbody id="changelogTableBody">
-                                <!-- Rows will be rendered here -->
-                            </tbody>
+                            <tbody id="changelogTableBody"></tbody>
                         </table>
-                        <button type="button" class="btn btn-outline-success btn-sm" onclick="addChangelogRow()"><i class="fas fa-plus"></i> Add Row</button>
+                        <button type="button" class="btn btn-outline-success btn-sm"
+                                onclick="addChangelogRow()">
+                            <i class="fas fa-plus"></i> Add Row
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveCustomChangelogTable()">Save Changelog</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="saveCustomChangelogTable()">Save Changelog</button>
                 </div>
             </div>
         </div>
@@ -307,56 +1532,62 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted mb-3">Adjust page calculation parameters for more accurate page numbering.</p>
-                    
+                    <p class="text-muted mb-3">
+                        Adjust page calculation parameters for more accurate page numbering.
+                    </p>
                     <div class="mb-3">
                         <label class="form-label">Characters per line</label>
-                        <input type="number" class="form-control" id="charsPerLine" value="80" min="40" max="120">
+                        <input type="number" class="form-control" id="charsPerLine"
+                               value="80" min="40" max="120">
                         <small class="text-muted">Average characters that fit on one line</small>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Lines per page</label>
-                        <input type="number" class="form-control" id="linesPerPage" value="40" min="20" max="60">
+                        <input type="number" class="form-control" id="linesPerPage"
+                               value="40" min="20" max="60">
                         <small class="text-muted">Number of text lines that fit on one page</small>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Header height (lines)</label>
-                        <input type="number" class="form-control" id="headerHeight" value="3" min="1" max="10">
+                        <input type="number" class="form-control" id="headerHeight"
+                               value="3" min="1" max="10">
                         <small class="text-muted">Lines reserved for section headers</small>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Paragraph spacing (lines)</label>
-                        <input type="number" class="form-control" id="paragraphSpacing" value="2" min="0" max="5">
+                        <input type="number" class="form-control" id="paragraphSpacing"
+                               value="2" min="0" max="5">
                         <small class="text-muted">Extra lines added between paragraphs</small>
                     </div>
-                    
                     <hr class="my-4">
-                    
-                    <h6 class="mb-3">Document Logo</h6>
+                    <h6 class="mb-3" style="color:var(--bd-text);font-weight:600;">Document Logo</h6>
                     <div class="mb-3">
                         <label class="form-label">Logo for DOCX Export</label>
                         <div class="d-flex align-items-center gap-3">
-                            <div id="logoPreview" class="border rounded p-2" style="width: 100px; height: 60px; display: flex; align-items: center; justify-content: center; background-color: #f8f9fa;">
+                            <div id="logoPreview" class="border rounded p-2"
+                                 style="width:100px;height:60px;display:flex;align-items:center;
+                                        justify-content:center;background:var(--bd-raised);">
                                 <small class="text-muted">No logo</small>
                             </div>
                             <div class="flex-grow-1">
-                                <input type="file" class="form-control" id="logoUpload" accept="image/*" onchange="handleLogoUpload(event)">
-                                <small class="text-muted">Upload a logo to appear on the title page (PNG, JPG, GIF)</small>
+                                <input type="file" class="form-control" id="logoUpload"
+                                       accept="image/*" onchange="handleLogoUpload(event)">
+                                <small class="text-muted">Upload a logo for the title page (PNG, JPG, GIF)</small>
                             </div>
                         </div>
                         <div class="mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLogo()" id="removeLogoBtn" style="display: none;">
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="removeLogo()" id="removeLogoBtn" style="display:none;">
                                 <i class="fas fa-trash me-1"></i>Remove Logo
                             </button>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="savePageSettings()">Save Settings</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="savePageSettings()">Save Settings</button>
                 </div>
             </div>
         </div>
@@ -373,27 +1604,31 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Header Content</label>
-                        <textarea class="form-control" id="headerContent" rows="2" placeholder="Enter header content (e.g., {{title}} - Confidential)"></textarea>
+                        <textarea class="form-control" id="headerContent" rows="2"
+                                  placeholder="e.g., {{title}} - Confidential"></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Footer Content</label>
-                        <textarea class="form-control" id="footerContent" rows="2" placeholder="Enter footer content (e.g., {{title}} | Page {{page}})"></textarea>
+                        <textarea class="form-control" id="footerContent" rows="2"
+                                  placeholder="e.g., {{title}} | Page {{page}}"></textarea>
                     </div>
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
                         <strong>Available Variables:</strong>
                         <ul class="mb-0 mt-2">
-                            <li><code>{{title}}</code> - Project name</li>
-                            <li><code>{{page}}</code> - Page number (starts at 4 for main content)</li>
+                            <li><code>{{title}}</code> — Project name</li>
+                            <li><code>{{page}}</code> — Page number (starts at 4)</li>
                         </ul>
                         <div class="mt-2">
-                            <strong>Layout:</strong> Footer content will be left-aligned, page numbers will be right-aligned.
+                            <strong>Layout:</strong> Footer left-aligned; page numbers right-aligned.
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveHeaderFooter()">Save</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="saveHeaderFooter()">Save</button>
                 </div>
             </div>
         </div>
@@ -409,20 +1644,273 @@
                 </div>
                 <div class="modal-body">
                     <form id="documentInfoForm">
-                        <div class="mb-2"><label class="form-label">Document Title</label><input type="text" class="form-control" id="docInfoTitle"></div>
-                        <div class="mb-2"><label class="form-label">Author</label><input type="text" class="form-control" id="docInfoAuthor"></div>
-                        <div class="mb-2"><label class="form-label">Document Owner</label><input type="text" class="form-control" id="docInfoDocOwner"></div>
-                        <div class="mb-2"><label class="form-label">Process Owner</label><input type="text" class="form-control" id="docInfoProcOwner"></div>
-                        <div class="mb-2"><label class="form-label">Version No</label><input type="text" class="form-control" id="docInfoVersion"></div>
-                        <div class="mb-2"><label class="form-label">Effective Date</label><input type="date" class="form-control" id="docInfoEffDate"></div>
-                        <div class="mb-2"><label class="form-label">Last Reviewed Date</label><input type="date" class="form-control" id="docInfoLastRev"></div>
-                        <div class="mb-2"><label class="form-label">Next Reviewed Date</label><input type="date" class="form-control" id="docInfoNextRev"></div>
-                        <div class="mb-2"><label class="form-label">Document Link</label><input type="text" class="form-control" id="docInfoLink"></div>
+                        <div class="mb-2">
+                            <label class="form-label">Document Title</label>
+                            <input type="text" class="form-control" id="docInfoTitle">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Author</label>
+                            <input type="text" class="form-control" id="docInfoAuthor">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Document Owner</label>
+                            <input type="text" class="form-control" id="docInfoDocOwner">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Process Owner</label>
+                            <input type="text" class="form-control" id="docInfoProcOwner">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Version No</label>
+                            <input type="text" class="form-control" id="docInfoVersion">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Effective Date</label>
+                            <input type="date" class="form-control" id="docInfoEffDate">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Last Reviewed Date</label>
+                            <input type="date" class="form-control" id="docInfoLastRev">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Next Reviewed Date</label>
+                            <input type="date" class="form-control" id="docInfoNextRev">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Document Link</label>
+                            <input type="text" class="form-control" id="docInfoLink">
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveDocumentInfo()">Save</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="saveDocumentInfo()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Preview Modal -->
+    <div class="modal fade" id="templatePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="templatePreviewTitle">Template Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="templatePreviewDesc" class="text-muted mb-3"></p>
+                    <h6 style="color:var(--bd-text);font-weight:600;margin-bottom:.75rem;">Sections</h6>
+                    <ul id="templatePreviewSections" class="list-group list-group-flush"></ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Citation Manager Modal -->
+    <div class="modal fade" id="citationManagerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Citation Manager</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-primary btn-sm"
+                                onclick="showAddEditReferenceModal(-1)">
+                            <i class="fas fa-plus"></i> Add Reference
+                        </button>
+                    </div>
+                    <table class="table table-sm table-bordered" id="citationsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width:40px">#</th>
+                                <th>Authors</th>
+                                <th style="width:60px">Year</th>
+                                <th>Title</th>
+                                <th style="width:130px">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="citationsTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    No references yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Reference Modal -->
+    <div class="modal fade" id="addEditReferenceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addEditReferenceModalTitle">Add Reference</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editingRefIndex" value="-1">
+                    <div class="mb-3">
+                        <label class="form-label">Title <span style="color:var(--c-danger)">*</span></label>
+                        <input type="text" class="form-control" id="refTitle"
+                               placeholder="Article or book title">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Authors</label>
+                        <input type="text" class="form-control" id="refAuthors"
+                               placeholder="Smith, J., Doe, A.">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Year</label>
+                        <input type="text" class="form-control" id="refYear"
+                               placeholder="2023" style="max-width:120px">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Source</label>
+                        <input type="text" class="form-control" id="refSource"
+                               placeholder="Journal / Book / Website">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL</label>
+                        <input type="text" class="form-control" id="refUrl"
+                               placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="refNotes" rows="2"
+                                  placeholder="Optional notes"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="saveReference()">Save Reference</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Find & Replace Modal -->
+    <div class="modal fade" id="findReplaceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-search me-2"></i>Find &amp; Replace
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Find</label>
+                        <input type="text" class="form-control" id="findInput"
+                               placeholder="Search text…"
+                               onkeydown="if(event.key==='Enter') executeFindAll()">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Replace with</label>
+                        <input type="text" class="form-control" id="replaceInput"
+                               placeholder="Replacement text…">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="findCaseSensitive">
+                        <label class="form-check-label" for="findCaseSensitive">
+                            Case sensitive
+                        </label>
+                    </div>
+                    <div id="findReplaceResults"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-primary"
+                            onclick="executeFindAll()">Find All</button>
+                    <button type="button" class="btn btn-primary"
+                            onclick="executeReplaceAll()">Replace All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cross-Reference Picker Modal -->
+    <div class="modal fade" id="crossRefModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Insert Cross-Reference</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Click <strong>Insert</strong> next to a section to reference it.
+                    </p>
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width:60px">#</th>
+                                <th>Title</th>
+                                <th style="width:80px">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="crossRefTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">
+                                    No sections yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Comments Modal -->
+    <div class="modal fade" id="commentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-comment me-2"></i>Comments —
+                        <span id="commentsSectionTitle"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <textarea id="newCommentText" class="form-control" rows="2"
+                                  placeholder="Write a comment..."></textarea>
+                        <button class="btn btn-sm btn-primary mt-2"
+                                onclick="addSectionComment()">
+                            <i class="fas fa-plus me-1"></i>Add Comment
+                        </button>
+                    </div>
+                    <hr>
+                    <div id="commentsList"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -430,196 +1918,60 @@
 
     <!-- Scripts -->
     <script src="libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-
     <script src="app.js"></script>
-    <div class="modal fade" id="templatePreviewModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="templatePreviewTitle">Template Preview</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <p id="templatePreviewDesc" class="text-muted mb-3"></p>
-            <h6>Sections</h6>
-            <ul id="templatePreviewSections" class="list-group list-group-flush"></ul>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Citation Manager Modal -->
-    <div class="modal fade" id="citationManagerModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Citation Manager</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <button type="button" class="btn btn-primary btn-sm" onclick="showAddEditReferenceModal(-1)">
-                <i class="fas fa-plus"></i> Add Reference
-              </button>
-            </div>
-            <table class="table table-sm table-bordered" id="citationsTable">
-              <thead class="table-dark">
-                <tr>
-                  <th style="width:40px">#</th>
-                  <th>Authors</th>
-                  <th style="width:60px">Year</th>
-                  <th>Title</th>
-                  <th style="width:130px">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="citationsTableBody">
-                <tr><td colspan="5" class="text-center text-muted">No references yet.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <script>
+    /* ─── Sidebar collapse (index2.html only) ─── */
+    (function() {
+        var STORAGE_KEY = 'bytedraft_sb_collapsed_v2';
 
-    <!-- Add/Edit Reference Modal -->
-    <div class="modal fade" id="addEditReferenceModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="addEditReferenceModalTitle">Add Reference</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input type="hidden" id="editingRefIndex" value="-1">
-            <div class="mb-3">
-              <label class="form-label fw-bold">Title <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="refTitle" placeholder="Article or book title">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Authors</label>
-              <input type="text" class="form-control" id="refAuthors" placeholder="Smith, J., Doe, A.">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Year</label>
-              <input type="text" class="form-control" id="refYear" placeholder="2023" style="width:120px">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Source</label>
-              <input type="text" class="form-control" id="refSource" placeholder="Journal / Book / Website">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">URL</label>
-              <input type="text" class="form-control" id="refUrl" placeholder="https://...">
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Notes</label>
-              <textarea class="form-control" id="refNotes" rows="2" placeholder="Optional notes"></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="saveReference()">Save Reference</button>
-          </div>
-        </div>
-      </div>
-    </div>
+        function collapseSidebar() {
+            var sidebar   = document.getElementById('sidebar');
+            var main      = document.querySelector('.main-content');
+            var expandTab = document.getElementById('sidebarExpandTab');
+            var collapseBtn = document.getElementById('sidebarCollapseBtn');
 
-    <!-- Find & Replace Modal -->
-    <div class="modal fade" id="findReplaceModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title"><i class="fas fa-search me-2"></i>Find &amp; Replace</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label fw-bold">Find</label>
-              <input type="text" class="form-control" id="findInput" placeholder="Search text…"
-                onkeydown="if(event.key==='Enter') executeFindAll()">
-            </div>
-            <div class="mb-3">
-              <label class="form-label fw-bold">Replace with</label>
-              <input type="text" class="form-control" id="replaceInput" placeholder="Replacement text…">
-            </div>
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" id="findCaseSensitive">
-              <label class="form-check-label" for="findCaseSensitive">Case sensitive</label>
-            </div>
-            <div id="findReplaceResults"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-outline-primary" onclick="executeFindAll()">Find All</button>
-            <button type="button" class="btn btn-primary" onclick="executeReplaceAll()">Replace All</button>
-          </div>
-        </div>
-      </div>
-    </div>
+            var willCollapse = !sidebar.classList.contains('is-collapsed');
+            sidebar.classList.toggle('is-collapsed', willCollapse);
+            main.classList.toggle('sidebar-collapsed', willCollapse);
+            expandTab.classList.toggle('visible', willCollapse);
 
-    <!-- Cross-Reference Picker Modal -->
-    <div class="modal fade" id="crossRefModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Insert Cross-Reference</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-muted mb-3">
-              Click <strong>Insert</strong> next to a section to reference it at the cursor position.
-            </p>
-            <table class="table table-sm table-bordered">
-              <thead class="table-dark">
-                <tr>
-                  <th style="width:60px">#</th>
-                  <th>Title</th>
-                  <th style="width:80px">Action</th>
-                </tr>
-              </thead>
-              <tbody id="crossRefTableBody">
-                <tr><td colspan="3" class="text-center text-muted">No sections yet.</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
+            // Flip the chevron on the collapse button
+            if (collapseBtn) {
+                var icon = collapseBtn.querySelector('i');
+                if (icon) {
+                    icon.className = willCollapse
+                        ? 'fas fa-chevron-right'
+                        : 'fas fa-chevron-left';
+                }
+            }
 
-    <!-- Section Comments Modal -->
-    <div class="modal fade" id="commentsModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title"><i class="fas fa-comment me-2"></i>Comments — <span id="commentsSectionTitle"></span></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <textarea id="newCommentText" class="form-control" rows="2" placeholder="Write a comment..."></textarea>
-              <button class="btn btn-sm btn-primary mt-2" onclick="addSectionComment()">
-                <i class="fas fa-plus me-1"></i>Add Comment
-              </button>
-            </div>
-            <hr>
-            <div id="commentsList"></div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          </div>
-        </div>
-      </div>
-    </div>
+            localStorage.setItem(STORAGE_KEY, willCollapse ? '1' : '0');
+        }
+
+        // Expose globally so onclick can reach it
+        window.collapseSidebar = collapseSidebar;
+
+        // Restore persisted state before first paint
+        document.addEventListener('DOMContentLoaded', function() {
+            if (localStorage.getItem(STORAGE_KEY) === '1') {
+                var sidebar   = document.getElementById('sidebar');
+                var main      = document.querySelector('.main-content');
+                var expandTab = document.getElementById('sidebarExpandTab');
+                var collapseBtn = document.getElementById('sidebarCollapseBtn');
+
+                sidebar.classList.add('is-collapsed');
+                main.classList.add('sidebar-collapsed');
+                expandTab.classList.add('visible');
+
+                if (collapseBtn) {
+                    var icon = collapseBtn.querySelector('i');
+                    if (icon) icon.className = 'fas fa-chevron-right';
+                }
+            }
+        });
+    })();
+    </script>
 
 </body>
 </html>

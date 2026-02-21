@@ -48,14 +48,18 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Multi-section Export**: Title page, changelog, and TOC without headers/footers; main content with custom headers/footers
 
 ### 🎨 **User Interface**
-- **Modern Design**: Clean, professional interface with Bootstrap 5
+- **"Slate Pro" Design System**: Refined, professional dark-first UI with indigo accent colors and DM Sans typography
+- **Permanent-Dark Collapsible Sidebar**: Always-dark navigation panel that responds to light/dark theme; collapse to zero with a single click and re-expand via a floating edge tab
+- **Frosted-Glass Top Bar**: Sticky top bar with `backdrop-filter` blur for a modern layered look
+- **Pill-Shaped Buttons**: Primary actions use pill-shaped buttons with smooth hover transitions
+- **Refined Modals**: Large border-radius modals with polished shadows and uppercase field labels
 - **Responsive Layout**: Works on desktop and tablet devices
 - **Project Management**: Organize multiple documentation projects
-- **Status Tracking**: Draft, Working, and Publish statuses
+- **Status Tracking**: Draft, Working, and Publish statuses with luminous pill badges
 - **Real-time Preview**: See changes reflected immediately
-- **Dark/Light Theme**: Toggle between themes for comfortable editing with persistence
+- **Dark/Light Theme**: Toggle between themes for comfortable editing with persistence; sidebar adapts to both modes
 - **Centralized Notifications**: All status messages appear in the top center for consistent user experience
-- **Professional CSS Organization**: Well-structured styles with comprehensive documentation
+- **Smooth Animations**: Entrance animations for section cards and sidebar collapse/expand transitions
 
 ### 💾 **Data Management**
 - **Local Storage**: All data stored in your browser (no server required)
@@ -67,6 +71,20 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 - **Complete Data Preservation**: JSON exports include document info, changelog, headers/footers, and version history
 
 ## 📋 Changelog
+
+### v1.0.0
+- **Redesign**: Complete UI overhaul — "Slate Pro" design system replacing the generic Bootstrap appearance
+- **Feature**: Collapsible sidebar — collapse the left panel with the `‹` button; a floating accent tab on the left edge restores it; state persisted to localStorage
+- **Feature**: Permanent-dark sidebar — sidebar retains a deep slate palette in light mode and shifts to near-black in dark mode, matching the theme toggle
+- **Feature**: Frosted-glass top bar — sticky top bar now uses `backdrop-filter` blur for a layered glass effect
+- **Feature**: Pill-shaped top-bar buttons — primary action buttons use a pill border-radius with smooth hover lift/color transitions
+- **Feature**: Refined modals — all modals upgraded to larger corner radius, softer shadows, and uppercase tracked form labels
+- **Feature**: DM Sans typography — distinctive humanist sans-serif replaces the generic system font stack
+- **Feature**: Luminous status badges — Draft / Working / Publish now use semi-transparent pill badges with glow-coloured text
+- **Feature**: Section entrance animation — section cards fade and slide up on render without creating a CSS stacking context (fixing TinyMCE fullscreen)
+- **Fix**: TinyMCE fullscreen — `animation-fill-mode: both` was leaving a permanent `transform: translateY(0)` on `.section-item`, creating a stacking context that trapped the `position: fixed` fullscreen overlay; changed to `backwards` fill-mode with `transform: none` final state
+- **Fix**: TinyMCE fullscreen double-editor — blanket `z-index: 9900` was applied to all editors when any one went fullscreen; now only the `.tox-tinymce.tox-fullscreen` container is promoted and other editors are hidden while fullscreen is active
+- **Infra**: `index.html` is now the modernised UI; previous UI preserved as `index.bak`
 
 ### v0.0.54
 - **Feature**: `{{Field Name}}` placeholder substitution — type `{{Field Name}}` anywhere in a section and the value is resolved at DOCX export time; unmatched placeholders are left as-is
@@ -311,13 +329,14 @@ See git history.
 ### File Structure
 ```
 ByteDraft/
-├── index.html              # Main application shell (HTML + modals)
+├── index.html              # Main application shell (HTML + embedded "Slate Pro" styles + modals)
+├── index.bak               # Previous UI (archived)
 ├── app.js                  # Application logic
 ├── templates.js            # Document templates
 ├── modernDocxExport.js     # Modern DOCX export module
 ├── libs/                   # External libraries
 │   ├── css/               # CSS files
-│   │   ├── styles.css     # Main application styles
+│   │   ├── styles.css     # Legacy styles (no longer loaded by main UI)
 │   │   └── github-dark.min.css # Code syntax highlighting theme
 │   ├── tinymce/           # TinyMCE editor
 │   ├── bootstrap/         # Bootstrap JS + CSS
@@ -377,11 +396,12 @@ templates['my-template'] = {
 ```
 
 ### Customizing Styles
-Modify the CSS in `libs/css/styles.css` to change the appearance:
-- Color schemes
-- Layout adjustments
-- Typography changes
-- Component styling
+The UI styles are embedded in the `<style>` block inside `index.html`. The design system uses CSS custom properties (variables) defined at the top of that block — edit the `:root` and `[data-theme="dark"]` sections to restyle the entire application:
+- `--accent` / `--accent-hi` — primary action colour
+- `--sb-bg` / `--sb-text` — sidebar colours
+- `--bd-bg` / `--bd-surface` — main content background and card surfaces
+- `--r-*` — border-radius tokens (xs → pill)
+- `--t-fast` / `--t-mid` — animation duration tokens
 
 ### Extending Functionality
 The modular design allows easy addition of:
@@ -403,5 +423,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.54
-© 2025 - Built for offline productivity
+**Version** 1.0.0
+© 2026 - Built for offline productivity
