@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="author" content="7ANG0N1N3">
     <meta name="github" content="https://github.com/7ang0n1n3/ByteDraft">
-    <meta name="version" content="1.5.0">
+    <meta name="version" content="1.5.1">
     <title>ByteDraft — Technical Documentation</title>
 
     <!-- Bootstrap CSS -->
@@ -1105,6 +1105,11 @@
         animation: none !important;
         overflow: visible !important;
     }
+    /* Ensure Bootstrap modals and toasts appear above the TinyMCE fullscreen overlay.
+       Ladder: editor(9900) < aux/menus(9905) < backdrop(9910) < modal(9920) < toasts(9999) */
+    body.tox-fullscreen .tox-tinymce-aux     { z-index: 9905 !important; }
+    body.tox-fullscreen .modal-backdrop      { z-index: 9910 !important; }
+    body.tox-fullscreen .modal.show          { z-index: 9920 !important; }
 
     /* ─── Dark Mode: Content area ────────────────────── */
     [data-theme="dark"] .p-4,

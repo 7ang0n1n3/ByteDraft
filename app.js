@@ -83,6 +83,36 @@
 
 
 
+        // Compress an image data-URL to JPEG at max dimension and given quality.
+        // Downscales only if wider or taller than maxDim; sets white canvas background
+        // so PNG transparency doesn't become black in JPEG.
+        function compressImage(dataUrl, maxDim, quality) {
+            maxDim  = maxDim  || 1920;
+            quality = quality || 0.82;
+            return new Promise(function(resolve) {
+                const img = new Image();
+                img.onload = function() {
+                    let w = img.naturalWidth;
+                    let h = img.naturalHeight;
+                    if (w > maxDim || h > maxDim) {
+                        const ratio = Math.min(maxDim / w, maxDim / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+                img.onerror = function() { resolve(dataUrl); }; // fallback: return original
+                img.src = dataUrl;
+            });
+        }
+
         // Templates will be loaded from templates.json
         let templates = {};
 
@@ -411,7 +441,7 @@
                 content_style: buildTinyMCEContentStyle(isDark),
                 images_upload_handler: (blobInfo) => new Promise((resolve, reject) => {
                     const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
+                    reader.onload = () => compressImage(reader.result).then(resolve);
                     reader.onerror = () => reject('Image upload failed');
                     reader.readAsDataURL(blobInfo.blob());
                 }),
@@ -425,7 +455,8 @@
                             const file = input.files[0];
                             if (file) {
                                 const reader = new FileReader();
-                                reader.onload = () => callback(reader.result, { title: file.name });
+                                reader.onload = () => compressImage(reader.result)
+                                    .then(dataUrl => callback(dataUrl, { title: file.name }));
                                 reader.readAsDataURL(file);
                             }
                         };
@@ -2169,16 +2200,17 @@
             const reader = new FileReader();
             reader.onerror = () => showToast('Failed to read image file', 'danger');
             reader.onload = function(e) {
-                const src = e.target.result;
                 const escapedCaption = caption.replace(/&/g,'&amp;').replace(/"/g,'&quot;')
                                                .replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                editor.insertContent(
-                    '<figure class="bd-fig">' +
-                    '<img src="' + src + '" style="max-width:100%;" alt="' + escapedCaption + '">' +
-                    '<figcaption class="bd-figcap">' + escapedCaption + '</figcaption>' +
-                    '</figure>'
-                );
-                bootstrap.Modal.getInstance(document.getElementById('figureModal')).hide();
+                compressImage(e.target.result).then(function(src) {
+                    editor.insertContent(
+                        '<figure class="bd-fig">' +
+                        '<img src="' + src + '" style="max-width:100%;" alt="' + escapedCaption + '">' +
+                        '<figcaption class="bd-figcap">' + escapedCaption + '</figcaption>' +
+                        '</figure>'
+                    );
+                    bootstrap.Modal.getInstance(document.getElementById('figureModal')).hide();
+                });
             };
             reader.readAsDataURL(file);
         }

@@ -76,6 +76,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.5.1
+- **Fix**: Large images no longer slow down the editor — a shared `compressImage()` helper (Canvas → JPEG, max 1920 px, quality 0.82) is applied to every image insertion path: drag-drop/paste via `images_upload_handler`, the TinyMCE image-dialog file picker, and the [Fig] captioned-figure modal; a typical 6 MB photo is reduced to ~200–400 KB before being stored in `localStorage`, cutting serialisation time and editor repaint cost by ~15–20×; transparent PNGs are composited on white so they render correctly as JPEG
+- **Fix**: Bootstrap modals (Insert Figure, Add Table Caption, Note, cross-reference, etc.) now open correctly while TinyMCE is in fullscreen mode — a z-index ladder pins the fullscreen editor at 9900, TinyMCE's aux/dropdown layer at 9905, the modal backdrop at 9910, and shown modals at 9920; the modal rule targets `.modal.show` only so hidden modals never participate in stacking and cannot interfere with toolbar dropdown menus
+
 ### v1.5.0
 - **Feature**: Figure numbering — `[Fig]` TinyMCE toolbar button opens a modal to select an image file and enter a caption; inserts a `<figure class="bd-fig">` block with a styled italic `<figcaption>` beneath the image; figures are stored with `extended_valid_elements` support and survive saves/re-renders
 - **Feature**: Table caption numbering — `[TblCap]` TinyMCE toolbar button opens a modal to enter a caption; inserts a `<p class="bd-tabcap">` immediately above the table the cursor is in
@@ -481,5 +485,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.5.0
+**Version** 1.5.1
 © 2026 - Built for offline productivity
