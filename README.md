@@ -68,6 +68,11 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v0.0.54
+- **Feature**: `{{Field Name}}` placeholder substitution — type `{{Field Name}}` anywhere in a section and the value is resolved at DOCX export time; unmatched placeholders are left as-is
+- **Feature**: `{{}}` toolbar button in TinyMCE — opens a dropdown of all defined custom fields and inserts the selected placeholder at the cursor; shows "No fields defined" when the list is empty
+- **Improvement**: Custom fields sidebar redesigned — each field now shows an editable name input with a live-updating `{{keyword}}` badge and a separate value input, so the placeholder syntax is always visible and field names can be renamed in place without deleting and recreating
+
 ### v0.0.53
 - **Fix**: Applying text color or highlight inside a table cell no longer colors the entire cell — child-element background-color scanning in `processTable` was picking up text-highlight spans and applying them as cell shading; cell background is now read only from the `<td>` element's own style
 
@@ -265,10 +270,12 @@ See git history.
 - **Data Validation**: Robust validation of imported JSON structure
 - **Seamless Integration**: Imported projects work exactly like native projects
 
-### Custom Fields
-- **Project Metadata**: Add custom fields for project-specific information
+### Custom Fields & Placeholders
+- **Project Metadata**: Add custom fields for project-specific information (e.g. Client Name, Review Date)
+- **`{{Field}}` Placeholder Syntax**: Type `{{Field Name}}` anywhere in a section — values are substituted at DOCX export time
+- **Insert from Toolbar**: Use the `{{}}` TinyMCE toolbar button to pick a field from a dropdown and insert the placeholder at the cursor
+- **Editable Name & Value**: Each field in the sidebar shows an editable name input with a live `{{keyword}}` badge and a separate value input — rename fields without deleting and recreating
 - **Flexible Structure**: Define field names and values as needed
-- **Export Inclusion**: Custom fields appear in exported documents
 - **Multiple Types**: Text, date, email, URL field types
 - **Data Persistence**: Custom fields preserved in JSON exports and imports
 
@@ -396,5 +403,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 0.0.53
+**Version** 0.0.54
 © 2025 - Built for offline productivity

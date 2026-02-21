@@ -320,7 +320,7 @@
                 ],
                 toolbar: [
                     'undo redo | formatselect | bold italic underline strikethrough',
-                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref'
+                    'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | code fullscreen help | citations | xref | insertfield'
                 ].join(' | '),
                 font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
                 font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Verdana=verdana,geneva,sans-serif; Georgia=georgia,palatino,serif; Trebuchet MS=trebuchet ms,geneva,sans-serif; Comic Sans MS=comic sans ms,sans-serif;',
@@ -427,6 +427,23 @@
             tinymce.init({
                 ...getTinyMCEBaseConfig(`#editor-${path.join('-')}`, isDarkTheme),
                 setup: function(editor) {
+                    editor.ui.registry.addMenuButton('insertfield', {
+                        text: '{{}}',
+                        tooltip: 'Insert field placeholder',
+                        fetch: function(callback) {
+                            if (!customFields.length) {
+                                callback([{ type: 'menuitem', text: 'No fields defined', enabled: false, onAction: () => {} }]);
+                                return;
+                            }
+                            callback(customFields.map(f => ({
+                                type: 'menuitem',
+                                text: f.name,
+                                onAction: function() {
+                                    editor.insertContent(`{{${f.name}}}`);
+                                }
+                            })));
+                        }
+                    });
                     editor.ui.registry.addButton('citations', {
                         text: '[Cite]',
                         tooltip: 'Insert citation',
@@ -714,22 +731,51 @@
         function renderCustomFields() {
             const container = document.getElementById('customFieldsList');
             container.innerHTML = '';
-            
+
             customFields.forEach(field => {
                 const fieldDiv = document.createElement('div');
                 fieldDiv.className = 'field-item';
+                fieldDiv.style.cssText = 'flex-direction: column; align-items: stretch; gap: 4px;';
                 fieldDiv.innerHTML = `
-                    <input type="text" class="form-control form-control-sm" 
-                           value="${escapeHtml(field.value)}" 
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input type="text" class="form-control form-control-sm"
+                               value="${escapeHtml(field.name)}"
+                               onchange="updateFieldName('${field.id}', this.value)"
+                               placeholder="Field name"
+                               title="Edit field name (keyword)"
+                               style="font-weight:500;">
+                        <code id="field-badge-${field.id}"
+                              style="font-size:0.78em; white-space:nowrap; padding:2px 5px; background:var(--bs-secondary-bg); border-radius:4px; border:1px solid var(--bs-border-color);"
+                              title="Use this placeholder in your document">&#123;&#123;${escapeHtml(field.name)}&#125;&#125;</code>
+                        <button class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="removeField('${field.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <input type="text" class="form-control form-control-sm"
+                           value="${escapeHtml(field.value)}"
                            onchange="updateFieldValue('${field.id}', this.value)"
-                           placeholder="${escapeHtml(field.name)}">
-                    <button class="btn btn-sm btn-outline-danger" onclick="removeField('${field.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                           placeholder="Value"
+                           title="Field value substituted at export">
                 `;
-                
+
+                // Live-update the badge when the name input changes
+                const nameInput = fieldDiv.querySelector('input');
+                const badge = fieldDiv.querySelector(`#field-badge-${field.id}`);
+                nameInput.addEventListener('input', function() {
+                    badge.innerHTML = '&#123;&#123;' + escapeHtml(this.value) + '&#125;&#125;';
+                });
+
                 container.appendChild(fieldDiv);
             });
+        }
+
+        function updateFieldName(fieldId, name) {
+            if (!name.trim()) return;
+            const field = customFields.find(f => f.id === fieldId);
+            if (field) {
+                field.name = name.trim();
+                saveCustomFields();
+            }
         }
 
         function updateFieldValue(fieldId, value) {
@@ -761,15 +807,30 @@
             }
         }
 
+        function resolveFieldsInProject(project) {
+            if (!customFields.length) return project;
+            const clone = JSON.parse(JSON.stringify(project));
+            function walkSections(sections) {
+                sections.forEach(section => {
+                    if (section.content) section.content = applyFieldSubstitutions(section.content);
+                    if (section.subsections && section.subsections.length) walkSections(section.subsections);
+                });
+            }
+            if (clone.sections) walkSections(clone.sections);
+            return clone;
+        }
+
         async function exportToDocx() {
             try {
                 console.log('Starting modern DOCX export...');
                 updateAllSectionContents();
                 saveProject();
-                
+
+                const exportProject = resolveFieldsInProject(currentProject);
+
                 // Use the modern DOCX export implementation
                 await exportProjectToDocxModern(
-                    currentProject,
+                    exportProject,
                     customChangelog[currentProject.id] || '',
                     versionHistory.filter(v => v.projectId === currentProject.id)
                 );
@@ -843,6 +904,16 @@
 
         function saveCustomFields() {
             safeSetItem('bytedraft_fields', JSON.stringify(customFields));
+        }
+
+        function applyFieldSubstitutions(html) {
+            if (!customFields.length) return html;
+            const fieldMap = {};
+            customFields.forEach(f => { fieldMap[f.name.toLowerCase()] = f.value; });
+            return html.replace(/\{\{([^}]+)\}\}/g, (match, name) => {
+                const val = fieldMap[name.trim().toLowerCase()];
+                return val !== undefined ? escapeHtml(val) : match;
+            });
         }
 
         function saveVersionHistory() {

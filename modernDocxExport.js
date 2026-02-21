@@ -17,8 +17,9 @@ class ModernDocxExporter {
 
         try {
             // Collect all content from sections and subsections
+            // Note: field placeholder substitution has already been applied by the caller
             const allContent = this.collectAllContent(project);
-            
+
             // Clean up the content for better DOCX conversion
             const cleanedContent = this.cleanContentForDocx(allContent);
             
