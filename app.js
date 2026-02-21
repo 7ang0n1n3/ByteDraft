@@ -12,6 +12,8 @@
             }
         });
 
+        let _storageWarned = false;  // warn once per session when storage approaches 80%
+
         function escapeHtml(str) {
             if (!str) return '';
             return String(str)
@@ -41,7 +43,7 @@
             const okBtn = document.getElementById('confirmModalOkBtn');
             okBtn.textContent = okLabel;
             okBtn.className = 'btn ' + okClass;
-            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
             const handler = () => {
                 modal.hide();
                 okBtn.removeEventListener('click', handler);
@@ -51,7 +53,20 @@
             modal.show();
         }
 
+        function getLocalStorageSize() {
+            let total = 0;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                total += (key.length + (localStorage.getItem(key) || '').length) * 2;
+            }
+            return total;
+        }
+
         function safeSetItem(key, value) {
+            if (!_storageWarned && getLocalStorageSize() >= 4194304) {
+                _storageWarned = true;
+                showToast('Storage is nearly full (>80%). Consider removing logos or exporting old projects.', 'warning');
+            }
             try {
                 localStorage.setItem(key, value);
             } catch (e) {
@@ -78,6 +93,12 @@
             renderTemplates();
             renderCustomFields();
             initSidebarCollapse();
+
+            // Dispose Bootstrap modal instances after close to free their event listeners.
+            // getOrCreateInstance() re-creates transparently on next open.
+            document.addEventListener('hidden.bs.modal', function(e) {
+                bootstrap.Modal.getInstance(e.target)?.dispose();
+            });
         });
 
         document.addEventListener('keydown', function(e) {
@@ -760,7 +781,7 @@
                 li.textContent = s.title;
                 ul.appendChild(li);
             });
-            new bootstrap.Modal(document.getElementById('templatePreviewModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('templatePreviewModal')).show();
         }
 
         // Custom Fields
@@ -938,16 +959,16 @@
                 container.appendChild(versionDiv);
             });
             
-            new bootstrap.Modal(document.getElementById('versionHistoryModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('versionHistoryModal')).show();
         }
 
         // Utility Functions
         function showNewProjectModal() {
-            new bootstrap.Modal(document.getElementById('newProjectModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('newProjectModal')).show();
         }
 
         function showNewFieldModal() {
-            new bootstrap.Modal(document.getElementById('newFieldModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('newFieldModal')).show();
         }
 
         function toggleSidebar() {
@@ -992,7 +1013,7 @@
             }
             
             renderChangelogTable();
-            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('customChangelogModal')).show();
         }
 
         // Auto-save every 30 seconds — data only, no revision history entry
@@ -1048,7 +1069,7 @@
             let projectHeaderFooter = headerFooter[currentProject.id] || { header: '', footer: '' };
             document.getElementById('headerContent').value = projectHeaderFooter.header || '';
             document.getElementById('footerContent').value = projectHeaderFooter.footer || '';
-            const modal = new bootstrap.Modal(document.getElementById('headerFooterModal'));
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('headerFooterModal'));
             modal.show();
         }
         function saveHeaderFooter() {
@@ -1313,7 +1334,7 @@
             document.getElementById('docInfoLastRev').value = info.lastRev || '';
             document.getElementById('docInfoNextRev').value = info.nextRev || '';
             document.getElementById('docInfoLink').value = info.link || '';
-            new bootstrap.Modal(document.getElementById('documentInfoModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('documentInfoModal')).show();
         }
         function saveDocumentInfo() {
             if (!currentProject) return;
@@ -1438,7 +1459,7 @@
         }
         function showCustomChangelogModal() {
             renderChangelogTable();
-            new bootstrap.Modal(document.getElementById('customChangelogModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('customChangelogModal')).show();
         }
 
 
@@ -1775,7 +1796,7 @@
             // Load logo
             loadLogoPreview();
             
-            new bootstrap.Modal(document.getElementById('pageSettingsModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('pageSettingsModal')).show();
         }
 
         function autoSavePageSettings() {
@@ -1894,7 +1915,7 @@
                 return;
             }
             renderCitationsTable();
-            new bootstrap.Modal(document.getElementById('citationManagerModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('citationManagerModal')).show();
         }
 
         function renderCitationsTable() {
@@ -1950,7 +1971,7 @@
             }
 
             // Show on top of citation manager
-            new bootstrap.Modal(modalEl).show();
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
 
         function saveReference() {
@@ -2029,7 +2050,7 @@
                     </tr>`;
                 }).join('');
             }
-            new bootstrap.Modal(document.getElementById('crossRefModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('crossRefModal')).show();
         }
 
         function insertCrossRef(path, label) {
@@ -2199,7 +2220,7 @@
             document.getElementById('findInput').value = '';
             document.getElementById('replaceInput').value = '';
             document.getElementById('findReplaceResults').innerHTML = '';
-            new bootstrap.Modal(document.getElementById('findReplaceModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('findReplaceModal')).show();
             setTimeout(() => document.getElementById('findInput').focus(), 300);
         }
 
@@ -2320,7 +2341,7 @@
             document.getElementById('commentsSectionTitle').textContent = node.title;
             document.getElementById('newCommentText').value = '';
             renderCommentsList(node);
-            new bootstrap.Modal(document.getElementById('commentsModal')).show();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('commentsModal')).show();
             setTimeout(() => document.getElementById('newCommentText').focus(), 300);
         }
 

@@ -72,6 +72,10 @@ ByteDraft is a modern technical documentation tool for creating, editing, and ex
 
 ## 📋 Changelog
 
+### v1.3.3
+- **Fix**: Proactive localStorage warning — `safeSetItem()` now measures current storage usage before each write; a yellow toast appears once per session when usage reaches 80% of the 5 MB quota (~4 MB), prompting the user to remove logos or export old projects before hitting the hard limit
+- **Fix**: Bootstrap modal instance leak — every `new bootstrap.Modal(el)` replaced with `bootstrap.Modal.getOrCreateInstance(el)`, and a single delegated `hidden.bs.modal` listener calls `.dispose()` after every modal closes; prevents event-listener accumulation over long sessions
+
 ### v1.3.2
 - **Fix**: Footer page number now always appears in the right cell using Word's native `PAGE` simple field (`<w:fldSimple w:instr=" PAGE ">`); no longer conditional on `{{page}}` being present in the footer template, and no longer relies on the complex field sequence that required Word to auto-update to display a value
 - **Fix**: Removed previous `PageNumber.CURRENT` TextRun approach that produced an empty result when Word did not auto-refresh the field on open
@@ -446,5 +450,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.3.2
+**Version** 1.3.3
 © 2026 - Built for offline productivity
