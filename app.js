@@ -502,8 +502,12 @@
                     editor.addShortcut('ctrl+f', 'Find & Replace', () => {
                         showFindReplaceModal();
                     });
+                    const _icons = window.bytedraftIcons || {};
+                    editor.ui.registry.addIcon('bytedraft-cite',  _icons.cite  || '[Cite]');
+                    editor.ui.registry.addIcon('bytedraft-xref',  _icons.xref  || '[XRef]');
+                    editor.ui.registry.addIcon('bytedraft-field', _icons.field || '{{}}');
                     editor.ui.registry.addMenuButton('insertfield', {
-                        text: '{{}}',
+                        icon: 'bytedraft-field',
                         tooltip: 'Insert field placeholder',
                         fetch: function(callback) {
                             if (!customFields.length) {
@@ -520,7 +524,7 @@
                         }
                     });
                     editor.ui.registry.addButton('citations', {
-                        text: '[Cite]',
+                        icon: 'bytedraft-cite',
                         tooltip: 'Insert citation',
                         onAction: function() {
                             window._activeCitationEditor = editor;
@@ -528,7 +532,7 @@
                         }
                     });
                     editor.ui.registry.addButton('xref', {
-                        text: '[XRef]',
+                        icon: 'bytedraft-xref',
                         tooltip: 'Insert cross-reference to another section',
                         onAction: function() {
                             window._activeXRefEditor = editor;
