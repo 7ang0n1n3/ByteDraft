@@ -485,5 +485,5 @@ The modular design allows easy addition of:
 ---
 
 **ByteDraft** - Professional documentation made simple
-**Version** 1.5.1
+**Version** 1.5.2
 © 2026 - Built for offline productivity
